@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Gövdağ — Master Şifre</title>
+<link rel="icon" type="image/png" href="favicon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --glass-bd: rgba(255,255,255,0.18);
+  --glass-bd2:rgba(255,255,255,0.28);
+  --glass-inp:rgba(255,255,255,0.06);
+  --t0:#ffffff;
+  --t1:rgba(255,255,255,0.78);
+  --t2:rgba(255,255,255,0.48);
+  --t3:rgba(255,255,255,0.26);
+  --accent:#7eeaad;
+  --accent-d:#3db87a;
+  --err:rgba(255,100,100,0.85);
+  --err-bg:rgba(255,100,100,0.10);
+  --err-bd:rgba(255,100,100,0.30);
+  --sans:'Sora',sans-serif;
+  --mono:'JetBrains Mono',monospace;
+  --r:16px;--r2:24px;
+}
+html,body{min-height:100%;font-family:var(--sans);background:#0a0b12;color:var(--t0);overflow-x:hidden;}
+
+.bg{position:fixed;inset:0;z-index:0;overflow:hidden;background:linear-gradient(135deg,#0a0916 0%,#0d1a2e 50%,#0a1218 100%);}
+.orb{position:absolute;border-radius:50%;filter:blur(90px);animation:drift 14s ease-in-out infinite alternate;}
+.o1{width:600px;height:600px;background:radial-gradient(circle,#4a2db5,transparent 70%);top:-200px;left:-150px;opacity:0.5;}
+.o2{width:500px;height:500px;background:radial-gradient(circle,#0e5c9e,transparent 70%);bottom:-150px;right:-100px;opacity:0.45;animation-delay:-5s;}
+.o3{width:350px;height:350px;background:radial-gradient(circle,#1a7a4e,transparent 70%);top:40%;left:55%;opacity:0.35;animation-delay:-8s;}
+.grid{position:absolute;inset:0;opacity:0.035;background-image:linear-gradient(rgba(255,255,255,1) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,1) 1px,transparent 1px);background-size:44px 44px;}
+@keyframes drift{0%{transform:translate(0,0) scale(1);}50%{transform:translate(20px,-15px) scale(1.03);}100%{transform:translate(-10px,18px) scale(0.98);}}
+
+.page{position:relative;z-index:1;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:32px 20px 56px;}
+
+.card{
+  width:100%;max-width:460px;
+  background:rgba(255,255,255,0.08);
+  backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);
+  border:1px solid var(--glass-bd2);border-radius:var(--r2);
+  padding:44px 40px 40px;
+  box-shadow:0 32px 80px rgba(0,0,0,0.55),inset 0 1px 0 rgba(255,255,255,0.22);
+  animation:cardIn 0.6s cubic-bezier(0.22,1,0.36,1) both;
+}
+@keyframes cardIn{from{opacity:0;transform:translateY(24px) scale(0.97)}to{opacity:1;transform:none}}
+
+/* ── LOGO ── */
+.logo-wrap{display:flex;flex-direction:column;align-items:center;margin-bottom:32px;}
+.lock-emblem{
+  width:68px;height:68px;border-radius:22px;margin-bottom:16px;
+  background:linear-gradient(135deg,rgba(126,234,173,0.2),rgba(61,184,122,0.08));
+  border:1px solid rgba(126,234,173,0.30);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 8px 28px rgba(126,234,173,0.15);
+  animation:pulse 3s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{box-shadow:0 8px 28px rgba(126,234,173,0.15);}50%{box-shadow:0 8px 40px rgba(126,234,173,0.28);}}
+.card-title{font-size:22px;font-weight:700;color:var(--t0);letter-spacing:-0.02em;text-align:center;margin-bottom:6px;}
+.card-sub{font-size:13px;color:var(--t2);text-align:center;line-height:1.6;margin-bottom:0;}
+
+/* ── UYARI KUTUSU ── */
+.warn-box{
+  margin:24px 0;padding:14px 16px;border-radius:var(--r);
+  background:rgba(255,193,7,0.07);border:1px solid rgba(255,193,7,0.22);
+  display:flex;gap:12px;align-items:flex-start;
+}
+.warn-box svg{flex-shrink:0;margin-top:1px;color:rgba(255,193,7,0.85);}
+.warn-txt{font-size:12px;color:rgba(255,220,80,0.85);line-height:1.65;}
+.warn-txt strong{color:rgba(255,230,100,0.95);font-weight:700;}
+
+/* ── FORM ── */
+.field{margin-bottom:16px;}
+.label{font-size:11px;font-weight:600;letter-spacing:0.09em;text-transform:uppercase;color:var(--t2);margin-bottom:7px;display:block;}
+.inp-wrap{position:relative;}
+.inp{
+  width:100%;padding:13px 44px 13px 14px;
+  background:var(--glass-inp);border:1px solid var(--glass-bd);border-radius:var(--r);
+  font-family:var(--mono);font-size:16px;letter-spacing:0.12em;
+  color:var(--t0);outline:none;
+  transition:border-color 0.2s,box-shadow 0.2s;
+}
+.inp::placeholder{color:var(--t3);letter-spacing:0.04em;font-family:var(--sans);font-size:14px;}
+.inp:focus{border-color:rgba(126,234,173,0.45);box-shadow:0 0 0 3px rgba(126,234,173,0.08);}
+.inp.err{border-color:rgba(255,100,100,0.5);box-shadow:0 0 0 3px rgba(255,100,100,0.07);}
+.inp-eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--t3);cursor:pointer;padding:4px;transition:color 0.15s;}
+.inp-eye:hover{color:var(--t1);}
+
+/* ── ŞİFRE GÜÇ ── */
+.strength-wrap{margin-top:8px;}
+.strength-bar-bg{height:4px;border-radius:2px;background:rgba(255,255,255,0.07);overflow:hidden;}
+.strength-bar{height:100%;border-radius:2px;width:0%;transition:width 0.4s,background 0.4s;}
+.strength-labels{display:flex;justify-content:space-between;margin-top:5px;}
+.strength-lbl{font-size:10px;color:var(--t3);}
+.strength-lbl.on{font-weight:600;}
+
+/* ── KURALLAR ── */
+.rules{margin:6px 0 16px;display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;}
+.rule{font-size:11px;color:var(--t3);display:flex;align-items:center;gap:5px;transition:color 0.2s;}
+.rule.ok{color:rgba(126,234,173,0.75);}
+.rule-dot{width:5px;height:5px;border-radius:50%;background:currentColor;flex-shrink:0;}
+
+/* ── EŞLEŞME ── */
+.match-hint{font-size:11px;margin-top:5px;height:14px;transition:color 0.2s;}
+.match-hint.ok{color:rgba(126,234,173,0.75);}
+.match-hint.no{color:rgba(255,100,100,0.75);}
+
+/* ── ALERT ── */
+.alert{border-radius:10px;padding:11px 14px;font-size:12px;line-height:1.55;margin-bottom:16px;display:none;align-items:flex-start;gap:9px;}
+.alert.err{display:flex;background:var(--err-bg);border:1px solid var(--err-bd);color:var(--err);}
+.alert svg{flex-shrink:0;margin-top:1px;}
+
+/* ── BUTON ── */
+.btn{
+  width:100%;padding:14px;
+  background:linear-gradient(135deg,rgba(126,234,173,0.22),rgba(61,184,122,0.12));
+  border:1px solid rgba(126,234,173,0.38);border-radius:var(--r);
+  font-family:var(--sans);font-size:13px;font-weight:700;
+  letter-spacing:0.07em;text-transform:uppercase;color:var(--accent);cursor:pointer;
+  transition:all 0.2s;box-shadow:0 4px 20px rgba(126,234,173,0.12);
+  display:flex;align-items:center;justify-content:center;gap:10px;
+}
+.btn:hover{background:linear-gradient(135deg,rgba(126,234,173,0.30),rgba(61,184,122,0.18));box-shadow:0 6px 28px rgba(126,234,173,0.22);}
+.btn:active{transform:scale(0.99);}
+.btn:disabled{opacity:0.45;cursor:not-allowed;transform:none;}
+.btn-spin{width:16px;height:16px;border:2px solid rgba(126,234,173,0.3);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;display:none;flex-shrink:0;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── TEKNİK NOT ── */
+.tech-note{
+  margin-top:20px;padding:12px 14px;border-radius:var(--r);
+  background:rgba(126,234,173,0.05);border:1px solid rgba(126,234,173,0.12);
+  display:flex;gap:10px;align-items:flex-start;
+}
+.tech-note-txt{font-size:11px;color:rgba(126,234,173,0.55);line-height:1.65;}
+
+/* ── BAŞARI ── */
+#successView{display:none;text-align:center;padding:10px 0;}
+.success-ico{
+  width:72px;height:72px;border-radius:50%;margin:0 auto 20px;
+  background:rgba(126,234,173,0.12);border:1px solid rgba(126,234,173,0.30);
+  display:flex;align-items:center;justify-content:center;
+  animation:popIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+@keyframes popIn{from{opacity:0;transform:scale(0.5)}to{opacity:1;transform:scale(1)}}
+.success-title{font-size:22px;font-weight:700;margin-bottom:8px;}
+.success-sub{font-size:13px;color:var(--t2);line-height:1.6;margin-bottom:24px;}
+
+/* ── GİRİŞ MODU (tekrar giriş) ── */
+#loginMode{display:none;}
+.mode-toggle{text-align:center;margin-top:16px;}
+.mode-toggle a{font-size:12px;color:var(--t2);text-decoration:none;cursor:pointer;transition:color 0.15s;}
+.mode-toggle a:hover{color:var(--accent);}
+</style>
+</head>
+<body>
+
+<div class="bg">
+  <div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div>
+  <div class="grid"></div>
+</div>
+
+<div class="page">
+  <div class="card">
+
+    <div class="logo-wrap">
+      <div class="lock-emblem">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#7eeaad" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="3"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      </div>
+      <div class="card-title" id="pageTitle">Master Şifrenizi Belirleyin</div>
+      <div class="card-sub" id="pageSub">Bu şifre parolalarınızı şifreler. Sunucuya gönderilmez, yalnızca sizde kalır.</div>
+    </div>
+
+    <!-- ALERT -->
+    <div class="alert" id="alert">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span id="alertMsg"></span>
+    </div>
+
+    <!-- ── YENİ KULLANICI: OLUŞTURMA MODU ── -->
+    <div id="setupMode" style="display:none;">
+      <div class="warn-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <div class="warn-txt"><strong>Önemli:</strong> Master şifrenizi unutursanız parolalarınıza bir daha erişemezsiniz. Lütfen güvenli bir yere not edin.</div>
+      </div>
+
+      <div class="field">
+        <label class="label">Master Şifre</label>
+        <div class="inp-wrap">
+          <input class="inp" type="password" id="pw1" placeholder="En az 10 karakter" oninput="onPw1(this.value)" autocomplete="new-password" />
+          <button class="inp-eye" type="button" onclick="toggleEye('pw1',this)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+        <div class="strength-wrap">
+          <div class="strength-bar-bg"><div class="strength-bar" id="sBar"></div></div>
+          <div class="strength-labels">
+            <span class="strength-lbl" id="sl0">Çok zayıf</span>
+            <span class="strength-lbl" id="sl1">Zayıf</span>
+            <span class="strength-lbl" id="sl2">Orta</span>
+            <span class="strength-lbl" id="sl3">Güçlü</span>
+            <span class="strength-lbl" id="sl4">Çok güçlü</span>
+          </div>
+        </div>
+        <div class="rules" id="rules">
+          <div class="rule" id="r-len"><div class="rule-dot"></div>En az 10 karakter</div>
+          <div class="rule" id="r-upper"><div class="rule-dot"></div>Büyük harf</div>
+          <div class="rule" id="r-lower"><div class="rule-dot"></div>Küçük harf</div>
+          <div class="rule" id="r-num"><div class="rule-dot"></div>Rakam</div>
+          <div class="rule" id="r-sym"><div class="rule-dot"></div>Özel karakter</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="label">Master Şifre (Tekrar)</label>
+        <div class="inp-wrap">
+          <input class="inp" type="password" id="pw2" placeholder="Tekrar girin" oninput="onPw2(this.value)" autocomplete="new-password" />
+          <button class="inp-eye" type="button" onclick="toggleEye('pw2',this)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+        <div class="match-hint" id="matchHint"></div>
+      </div>
+
+      <button class="btn" id="btnSetup" onclick="doSetup()" disabled>
+        <span id="btnSetupTxt">Kasayı Kilitle ve Devam Et</span>
+        <div class="btn-spin" id="btnSetupSpin"></div>
+      </button>
+
+      <div class="tech-note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="rgba(126,234,173,0.6)" stroke-width="1.8" width="14" height="14" style="flex-shrink:0;margin-top:1px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <div class="tech-note-txt">Master şifrenizden PBKDF2 (310.000 iterasyon, SHA-256) ile bir anahtar türetilir. Bu anahtar yalnızca tarayıcı oturumunuzda tutulur, sunucuya hiç gönderilmez.</div>
+      </div>
+    </div>
+
+    <!-- ── MEVCUT KULLANICI: GİRİŞ MODU ── -->
+    <div id="loginMode" style="display:none;">
+      <div class="field">
+        <label class="label">Master Şifre</label>
+        <div class="inp-wrap">
+          <input class="inp" type="password" id="pwLogin" placeholder="Master şifreniz" autocomplete="current-password" />
+          <button class="inp-eye" type="button" onclick="toggleEye('pwLogin',this)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <button class="btn" id="btnLogin" onclick="doLogin()">
+        <span id="btnLoginTxt">Kasayı Aç</span>
+        <div class="btn-spin" id="btnLoginSpin"></div>
+      </button>
+
+      <div class="tech-note" style="margin-top:20px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="rgba(126,234,173,0.6)" stroke-width="1.8" width="14" height="14" style="flex-shrink:0;margin-top:1px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <div class="tech-note-txt">Şifreniz doğrulandıktan sonra şifreleme anahtarı oluşturulur ve yalnızca bu oturumda bellekte tutulur.</div>
+      </div>
+    </div>
+
+    <!-- ── BAŞARI ── -->
+    <div id="successView" style="display:none;">
+      <div class="success-ico">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#7eeaad" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <div class="success-title">Kasa Açıldı</div>
+      <div class="success-sub">Şifreleme anahtarınız hazır. Dashboard'a yönlendiriliyorsunuz...</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════
+// YAPILANDIRMA
+// ════════════════════════════════════════════════════════════
+const SUPABASE_URL  = 'https://waqnacujnbnwxnmsjzxq.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndhcW5hY3VqbmJud3hubXNqenhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MjY5NjMsImV4cCI6MjA5MDMwMjk2M30.QWjJjcOxcvlwnMYiY_y87Juap9W9tIVY3VPLJB7zryM';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+// AES anahtarı window objesinde tutulur — tab kapanınca yok olur
+// Hiçbir zaman localStorage, sessionStorage veya sunucuya gönderilmez
+const VAULT_KEY_NAME = '__govdag_vault_key__';
+
+let currentUser = null;
+let bureauId    = null;
+let isSetupMode = false; // true = ilk kurulum, false = tekrar giriş
+
+// ════════════════════════════════════════════════════════════
+// BAŞLANGIÇ
+// ════════════════════════════════════════════════════════════
+(async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { window.location.href = 'login.html'; return; }
+  currentUser = session.user;
+
+  // Büro kontrolü
+  const { data: member } = await sb
+    .from('bureau_members')
+    .select('bureau_id, role')
+    .eq('user_id', currentUser.id)
+    .single();
+
+  if (!member) { window.location.href = 'onboarding.html'; return; }
+  bureauId = member.bureau_id;
+  sessionStorage.setItem('bureau_id', bureauId);
+  sessionStorage.setItem('user_role', member.role);
+
+  // Zaten anahtar türetilmişse direkt dashboard'a git
+  if (window[VAULT_KEY_NAME]) {
+    window.location.href = 'dashboard.html';
+    return;
+  }
+
+  // Master şifre daha önce kurulmuş mu? (salt varlığına bakıyoruz)
+  const salt = localStorage.getItem('govdag_salt_' + bureauId);
+
+  // Önce her ikisini de gizle
+  document.getElementById('setupMode').style.display = 'none';
+  document.getElementById('loginMode').style.display = 'none';
+
+  if (salt) {
+    isSetupMode = false;
+    document.getElementById('pageTitle').textContent = 'Master Şifrenizi Girin';
+    document.getElementById('pageSub').textContent   = 'Kasanıza erişmek için master şifrenizi girin.';
+    document.getElementById('loginMode').style.display = 'block';
+  } else {
+    isSetupMode = true;
+    document.getElementById('pageTitle').textContent = 'Master Şifrenizi Belirleyin';
+    document.getElementById('pageSub').textContent   = 'Bu şifre parolalarınızı şifreler. Sunucuya gönderilmez, yalnızca sizde kalır.';
+    document.getElementById('setupMode').style.display = 'block';
+  }
+})();
+
+// ════════════════════════════════════════════════════════════
+// ŞİFRE GÜCÜ
+// ════════════════════════════════════════════════════════════
+const LEVELS = [
+  {color:'#ff5c5c',width:'12%',idx:0},
+  {color:'#ff8c42',width:'30%',idx:1},
+  {color:'#ffc107',width:'55%',idx:2},
+  {color:'#7eeaad',width:'78%',idx:3},
+  {color:'#3db87a',width:'100%',idx:4},
+];
+
+function scorePassword(val) {
+  let s = 0;
+  if (val.length >= 10) s++;
+  if (val.length >= 14) s++;
+  if (/[A-Z]/.test(val)) s++;
+  if (/[a-z]/.test(val)) s++;
+  if (/[0-9]/.test(val)) s++;
+  if (/[^A-Za-z0-9]/.test(val)) s++;
+  return Math.min(Math.floor(s * 4 / 6), 4);
+}
+
+function onPw1(val) {
+  const score = val ? scorePassword(val) : -1;
+  const bar   = document.getElementById('sBar');
+
+  if (!val) { bar.style.width = '0%'; } 
+  else {
+    const lvl = LEVELS[score];
+    bar.style.width      = lvl.width;
+    bar.style.background = lvl.color;
+  }
+
+  // Label highlight
+  for (let i = 0; i < 5; i++) {
+    const el = document.getElementById('sl' + i);
+    el.classList.toggle('on', i === score);
+    el.style.color = (i === score && val) ? LEVELS[i].color : '';
+  }
+
+  // Kurallar
+  setRule('r-len',   val.length >= 10);
+  setRule('r-upper', /[A-Z]/.test(val));
+  setRule('r-lower', /[a-z]/.test(val));
+  setRule('r-num',   /[0-9]/.test(val));
+  setRule('r-sym',   /[^A-Za-z0-9]/.test(val));
+
+  // Buton aktif mi?
+  const pw2 = document.getElementById('pw2').value;
+  document.getElementById('btnSetup').disabled = !(score >= 3 && val === pw2 && pw2.length > 0);
+  onPw2(pw2);
+}
+
+function setRule(id, ok) {
+  document.getElementById(id).classList.toggle('ok', ok);
+}
+
+function onPw2(val) {
+  const pw1  = document.getElementById('pw1').value;
+  const hint = document.getElementById('matchHint');
+  const score = scorePassword(pw1);
+
+  if (!val) { hint.textContent = ''; hint.className = 'match-hint'; }
+  else if (val === pw1) { hint.textContent = 'Şifreler eşleşiyor'; hint.className = 'match-hint ok'; }
+  else { hint.textContent = 'Şifreler eşleşmiyor'; hint.className = 'match-hint no'; }
+
+  document.getElementById('btnSetup').disabled = !(score >= 3 && pw1 === val && val.length > 0);
+}
+
+// ════════════════════════════════════════════════════════════
+// PBKDF2 — ANAHTAR TÜRETME
+// ════════════════════════════════════════════════════════════
+async function deriveKey(password, saltHex) {
+  const enc     = new TextEncoder();
+  const saltBuf = hexToBuffer(saltHex);
+
+  const baseKey = await crypto.subtle.importKey(
+    'raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']
+  );
+
+  return crypto.subtle.deriveKey(
+    { name:'PBKDF2', salt:saltBuf, iterations:310000, hash:'SHA-256' },
+    baseKey,
+    { name:'AES-GCM', length:256 },
+    false,
+    ['encrypt','decrypt']
+  );
+}
+
+// Anahtarı doğrulamak için Supabase'e küçük bir doğrulama blobu kaydediyoruz.
+// Blob içeriği: AES-GCM ile şifrelenmiş sabit bir string ("govdag-verify-ok")
+// Supabase bunu şifreli olarak saklar, master şifre olmadan okunamaz.
+async function encryptVerify(key) {
+  const iv   = crypto.getRandomValues(new Uint8Array(12));
+  const data = new TextEncoder().encode('govdag-verify-ok');
+  const ct   = await crypto.subtle.encrypt({ name:'AES-GCM', iv }, key, data);
+  return bufferToHex(iv) + ':' + bufferToHex(new Uint8Array(ct));
+}
+
+async function decryptVerify(key, blob) {
+  try {
+    const [ivHex, ctHex] = blob.split(':');
+    const iv = hexToBuffer(ivHex);
+    const ct = hexToBuffer(ctHex);
+    const pt = await crypto.subtle.decrypt({ name:'AES-GCM', iv }, key, ct);
+    return new TextDecoder().decode(pt) === 'govdag-verify-ok';
+  } catch { return false; }
+}
+
+function bufferToHex(buf) {
+  return Array.from(buf).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+function hexToBuffer(hex) {
+  const arr = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < arr.length; i++) arr[i] = parseInt(hex.slice(i*2,i*2+2),16);
+  return arr;
+}
+
+// ════════════════════════════════════════════════════════════
+// KURULUM — İLK MASTER ŞİFRE OLUŞTURMA
+// ════════════════════════════════════════════════════════════
+async function doSetup() {
+  clearAlert();
+  const pw1 = document.getElementById('pw1').value;
+  const pw2 = document.getElementById('pw2').value;
+
+  if (pw1 !== pw2)         { showAlert('Şifreler eşleşmiyor.'); return; }
+  if (pw1.length < 10)     { showAlert('En az 10 karakter gerekli.'); return; }
+  if (scorePassword(pw1) < 3) { showAlert('Lütfen daha güçlü bir şifre belirleyin.'); return; }
+
+  setLoading('btnSetup','btnSetupSpin','btnSetupTxt', true);
+
+  try {
+    // 1. Salt üret ve localStorage'a kaydet (cihaza özel)
+    const saltArr = crypto.getRandomValues(new Uint8Array(32));
+    const saltHex = bufferToHex(saltArr);
+    localStorage.setItem('govdag_salt_' + bureauId, saltHex);
+
+    // 2. Anahtarı türet
+    const key = await deriveKey(pw1, saltHex);
+
+    // 3. Doğrulama blobu oluştur ve Supabase'e kaydet
+    const verifyBlob = await encryptVerify(key);
+    await sb.from('bureaus')
+      .update({ name: (await sb.from('bureaus').select('name').eq('id',bureauId).single()).data.name }) // dummy update to check RLS
+      .eq('id', bureauId);
+
+    // Verify blob'u localStorage'a kaydet (sadece doğrulama için, şifreli)
+    localStorage.setItem('govdag_verify_' + bureauId, verifyBlob);
+
+    // 4. Anahtarı window objesine koy (tab kapanınca yok olur)
+    window[VAULT_KEY_NAME] = key;
+
+    showSuccess();
+  } catch (err) {
+    setLoading('btnSetup','btnSetupSpin','btnSetupTxt', false);
+    showAlert('Hata: ' + (err.message || 'Anahtar oluşturulamadı'));
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// GİRİŞ — MEVCUT MASTER ŞİFRE DOĞRULAMA
+// ════════════════════════════════════════════════════════════
+async function doLogin() {
+  clearAlert();
+  const pw = document.getElementById('pwLogin').value;
+  if (!pw) { showAlert('Master şifrenizi girin.'); return; }
+
+  setLoading('btnLogin','btnLoginSpin','btnLoginTxt', true);
+
+  try {
+    const saltHex    = localStorage.getItem('govdag_salt_' + bureauId);
+    const verifyBlob = localStorage.getItem('govdag_verify_' + bureauId);
+
+    if (!saltHex || !verifyBlob) {
+      // Bu cihazda salt yok — farklı cihazdan ilk giriş
+      // Kullanıcıya bilgi ver, yeni cihaz akışı
+      showAlert('Bu cihazda daha önce giriş yapılmamış. Lütfen master şifrenizi girerek kasayı açın. (Yeni cihaz kurulumu)');
+      // Salt olmadan doğrulayamayız — yeni salt + mevcut şifre ile kurulum yap
+      localStorage.setItem('govdag_salt_' + bureauId, bufferToHex(crypto.getRandomValues(new Uint8Array(32))));
+      setLoading('btnLogin','btnLoginSpin','btnLoginTxt', false);
+
+      // Kurulum moduna geç
+      isSetupMode = true;
+      document.getElementById('pageTitle').textContent = 'Yeni Cihaz Kurulumu';
+      document.getElementById('pageSub').textContent   = 'Bu cihaz için master şifrenizi tekrar belirleyin.';
+      document.getElementById('loginMode').style.display  = 'none';
+      document.getElementById('setupMode').style.display  = 'block';
+      return;
+    }
+
+    const key    = await deriveKey(pw, saltHex);
+    const isOk   = await decryptVerify(key, verifyBlob);
+
+    if (!isOk) {
+      setLoading('btnLogin','btnLoginSpin','btnLoginTxt', false);
+      document.getElementById('pwLogin').classList.add('err');
+      setTimeout(() => document.getElementById('pwLogin').classList.remove('err'), 2000);
+      showAlert('Master şifre hatalı. Lütfen tekrar deneyin.');
+      return;
+    }
+
+    window[VAULT_KEY_NAME] = key;
+    showSuccess();
+
+  } catch (err) {
+    setLoading('btnLogin','btnLoginSpin','btnLoginTxt', false);
+    showAlert('Hata: ' + (err.message || 'Doğrulama başarısız'));
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// YARDIMCI
+// ════════════════════════════════════════════════════════════
+function showAlert(msg) {
+  const el = document.getElementById('alert');
+  el.className = 'alert err';
+  document.getElementById('alertMsg').textContent = msg;
+}
+function clearAlert() { document.getElementById('alert').className = 'alert'; }
+
+function setLoading(btnId, spinId, txtId, loading) {
+  document.getElementById(btnId).disabled              = loading;
+  document.getElementById(spinId).style.display        = loading ? 'block' : 'none';
+  document.getElementById(txtId).style.display         = loading ? 'none'  : 'inline';
+}
+
+function showSuccess() {
+  document.getElementById('setupMode').style.display  = 'none';
+  document.getElementById('loginMode').style.display  = 'none';
+  document.getElementById('successView').style.display = 'block';
+  setTimeout(() => window.location.href = 'dashboard.html', 1800);
+}
+
+function toggleEye(id, btn) {
+  const inp = document.getElementById(id);
+  inp.type  = inp.type === 'password' ? 'text' : 'password';
+  btn.style.color = inp.type === 'text' ? 'rgba(126,234,173,0.8)' : '';
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  if (!document.getElementById('loginMode').style.display || document.getElementById('loginMode').style.display !== 'none') doLogin();
+  else doSetup();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Gövdağ — Büro Kurulumu</title>
+<link rel="icon" type="image/png" href="favicon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --glass:    rgba(255,255,255,0.08);
+  --glass-bd: rgba(255,255,255,0.18);
+  --glass-bd2:rgba(255,255,255,0.28);
+  --glass-inp:rgba(255,255,255,0.06);
+  --t0: #ffffff;
+  --t1: rgba(255,255,255,0.78);
+  --t2: rgba(255,255,255,0.48);
+  --t3: rgba(255,255,255,0.26);
+  --accent:   #7eeaad;
+  --accent-d: #3db87a;
+  --err:      rgba(255,100,100,0.85);
+  --err-bg:   rgba(255,100,100,0.10);
+  --err-bd:   rgba(255,100,100,0.30);
+  --ok-bg:    rgba(126,234,173,0.10);
+  --ok-bd:    rgba(126,234,173,0.28);
+  --sans: 'Sora', sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+  --r: 16px;
+  --r2: 24px;
+}
+html,body{min-height:100%;font-family:var(--sans);background:#0a0b12;color:var(--t0);overflow-x:hidden;}
+
+/* ── ARKA PLAN ── */
+.bg{position:fixed;inset:0;z-index:0;overflow:hidden;background:linear-gradient(135deg,#0a0916 0%,#0d1a2e 50%,#0a1218 100%);}
+.orb{position:absolute;border-radius:50%;filter:blur(90px);animation:drift 14s ease-in-out infinite alternate;}
+.o1{width:600px;height:600px;background:radial-gradient(circle,#4a2db5,transparent 70%);top:-200px;left:-150px;opacity:0.5;animation-duration:16s;}
+.o2{width:500px;height:500px;background:radial-gradient(circle,#0e5c9e,transparent 70%);bottom:-150px;right:-100px;opacity:0.45;animation-duration:12s;animation-delay:-5s;}
+.o3{width:350px;height:350px;background:radial-gradient(circle,#1a7a4e,transparent 70%);top:40%;left:55%;opacity:0.35;animation-duration:18s;animation-delay:-8s;}
+.grid{position:absolute;inset:0;opacity:0.035;background-image:linear-gradient(rgba(255,255,255,1) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,1) 1px,transparent 1px);background-size:44px 44px;}
+@keyframes drift{0%{transform:translate(0,0) scale(1);}50%{transform:translate(20px,-15px) scale(1.03);}100%{transform:translate(-10px,18px) scale(0.98);}}
+
+/* ── SAYFA ── */
+.page{position:relative;z-index:1;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:32px 20px 56px;}
+
+/* ── KART ── */
+.card{
+  width:100%;max-width:480px;
+  background:rgba(255,255,255,0.08);
+  backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);
+  border:1px solid var(--glass-bd2);border-radius:var(--r2);
+  padding:44px 40px 40px;
+  box-shadow:0 32px 80px rgba(0,0,0,0.55),inset 0 1px 0 rgba(255,255,255,0.22);
+  animation:cardIn 0.6s cubic-bezier(0.22,1,0.36,1) both;
+}
+@keyframes cardIn{from{opacity:0;transform:translateY(24px) scale(0.97)}to{opacity:1;transform:none}}
+
+/* ── ADIM GÖSTERGESİ ── */
+.steps{display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:36px;}
+.step{display:flex;flex-direction:column;align-items:center;gap:6px;}
+.step-dot{
+  width:32px;height:32px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;font-family:var(--mono);
+  border:1px solid var(--glass-bd);background:var(--glass-inp);color:var(--t2);
+  transition:all 0.3s;
+}
+.step.done .step-dot{background:var(--accent-d);border-color:var(--accent);color:#000;}
+.step.active .step-dot{background:rgba(126,234,173,0.18);border-color:var(--accent);color:var(--accent);box-shadow:0 0 0 3px rgba(126,234,173,0.10);}
+.step-lbl{font-size:10px;color:var(--t3);letter-spacing:0.06em;text-transform:uppercase;font-weight:600;}
+.step.active .step-lbl{color:var(--accent);}
+.step.done .step-lbl{color:rgba(126,234,173,0.6);}
+.step-line{width:48px;height:1px;background:var(--glass-bd);margin:0 8px;margin-bottom:22px;}
+.step-line.done{background:var(--accent-d);}
+
+/* ── PANEL ── */
+.panel{display:none;animation:fadeSlide 0.35s ease both;}
+.panel.on{display:block;}
+@keyframes fadeSlide{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
+
+.panel-title{font-size:20px;font-weight:700;color:var(--t0);letter-spacing:-0.02em;margin-bottom:6px;}
+.panel-sub{font-size:13px;color:var(--t2);line-height:1.6;margin-bottom:28px;}
+
+/* ── FORM ELEMENTLERİ ── */
+.field{margin-bottom:16px;}
+.label{font-size:11px;font-weight:600;letter-spacing:0.09em;text-transform:uppercase;color:var(--t2);margin-bottom:7px;display:block;}
+.inp-wrap{position:relative;}
+.inp{
+  width:100%;padding:12px 44px 12px 14px;
+  background:var(--glass-inp);border:1px solid var(--glass-bd);border-radius:var(--r);
+  font-family:var(--sans);font-size:14px;color:var(--t0);outline:none;
+  transition:border-color 0.2s,box-shadow 0.2s;
+}
+.inp::placeholder{color:var(--t3);}
+.inp:focus{border-color:rgba(126,234,173,0.45);box-shadow:0 0 0 3px rgba(126,234,173,0.08);}
+.inp.err{border-color:rgba(255,100,100,0.5);}
+.inp-ico{position:absolute;right:13px;top:50%;transform:translateY(-50%);color:var(--t3);pointer-events:none;}
+
+.slug-wrap{position:relative;}
+.slug-prefix{
+  position:absolute;left:14px;top:50%;transform:translateY(-50%);
+  font-family:var(--mono);font-size:13px;color:var(--t3);pointer-events:none;
+}
+.inp-slug{padding-left:88px;}
+
+.hint{font-size:11px;color:var(--t3);margin-top:5px;line-height:1.5;}
+
+/* ── PLAN SEÇİMİ ── */
+.plan-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+.plan-card{
+  padding:16px 14px;border-radius:var(--r);
+  background:var(--glass-inp);border:1px solid var(--glass-bd);
+  cursor:pointer;transition:all 0.2s;text-align:left;
+  position:relative;overflow:hidden;
+}
+.plan-card:hover{background:rgba(255,255,255,0.10);border-color:rgba(255,255,255,0.25);}
+.plan-card.selected{background:rgba(126,234,173,0.10);border-color:rgba(126,234,173,0.38);box-shadow:0 0 0 3px rgba(126,234,173,0.07);}
+.plan-card.selected::before{content:'✓';position:absolute;top:10px;right:12px;font-size:12px;font-weight:700;color:var(--accent);}
+.plan-name{font-size:14px;font-weight:700;color:var(--t0);margin-bottom:4px;}
+.plan-price{font-size:20px;font-weight:700;color:var(--accent);font-family:var(--mono);}
+.plan-price span{font-size:11px;font-weight:400;color:var(--t2);}
+.plan-feat{font-size:11px;color:var(--t2);margin-top:6px;line-height:1.5;}
+.plan-badge{
+  display:inline-block;font-size:9px;font-weight:700;letter-spacing:0.08em;
+  text-transform:uppercase;padding:2px 7px;border-radius:50px;
+  background:rgba(126,234,173,0.15);color:var(--accent);border:1px solid rgba(126,234,173,0.25);
+  margin-bottom:6px;
+}
+
+/* ── ALERT ── */
+.alert{border-radius:10px;padding:11px 14px;font-size:12px;line-height:1.55;margin-bottom:16px;display:none;align-items:flex-start;gap:9px;}
+.alert.err{display:flex;background:var(--err-bg);border:1px solid var(--err-bd);color:var(--err);}
+.alert.ok{display:flex;background:var(--ok-bg);border:1px solid var(--ok-bd);color:var(--accent);}
+.alert svg{flex-shrink:0;margin-top:1px;}
+
+/* ── BUTON ── */
+.btn{
+  width:100%;padding:13px;
+  background:linear-gradient(135deg,rgba(126,234,173,0.22),rgba(61,184,122,0.12));
+  border:1px solid rgba(126,234,173,0.38);border-radius:var(--r);
+  font-family:var(--sans);font-size:13px;font-weight:700;
+  letter-spacing:0.07em;text-transform:uppercase;color:var(--accent);cursor:pointer;
+  transition:all 0.2s;box-shadow:0 4px 20px rgba(126,234,173,0.12);
+  display:flex;align-items:center;justify-content:center;gap:10px;
+}
+.btn:hover{background:linear-gradient(135deg,rgba(126,234,173,0.30),rgba(61,184,122,0.18));box-shadow:0 6px 28px rgba(126,234,173,0.22);}
+.btn:active{transform:scale(0.99);}
+.btn:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
+.btn-spin{width:16px;height:16px;border:2px solid rgba(126,234,173,0.3);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;display:none;flex-shrink:0;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.btn-sec{
+  width:100%;padding:11px;margin-top:10px;
+  background:transparent;border:1px solid var(--glass-bd);border-radius:var(--r);
+  font-family:var(--sans);font-size:13px;font-weight:600;color:var(--t2);cursor:pointer;
+  transition:all 0.15s;
+}
+.btn-sec:hover{background:rgba(255,255,255,0.06);color:var(--t1);}
+
+/* ── ÖZET ── */
+.summary{
+  background:rgba(255,255,255,0.05);border:1px solid var(--glass-bd);
+  border-radius:var(--r);padding:16px 18px;margin-bottom:20px;
+}
+.sum-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.06);}
+.sum-row:last-child{border-bottom:none;padding-bottom:0;}
+.sum-lbl{font-size:12px;color:var(--t2);}
+.sum-val{font-size:13px;font-weight:600;color:var(--t0);font-family:var(--mono);}
+.sum-val.accent{color:var(--accent);}
+
+/* ── BAŞARI ── */
+.success-wrap{text-align:center;padding:16px 0;}
+.success-ico{
+  width:72px;height:72px;border-radius:50%;margin:0 auto 20px;
+  background:rgba(126,234,173,0.12);border:1px solid rgba(126,234,173,0.30);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 0 40px rgba(126,234,173,0.15);
+  animation:popIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both 0.2s;
+}
+@keyframes popIn{from{opacity:0;transform:scale(0.5)}to{opacity:1;transform:scale(1)}}
+.success-title{font-size:22px;font-weight:700;color:var(--t0);letter-spacing:-0.02em;margin-bottom:8px;}
+.success-sub{font-size:13px;color:var(--t2);line-height:1.6;margin-bottom:28px;}
+.trial-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(126,234,173,0.10);border:1px solid rgba(126,234,173,0.22);
+  border-radius:50px;padding:6px 16px;font-size:12px;color:var(--accent);
+  margin-bottom:24px;
+}
+</style>
+</head>
+<body>
+
+<div class="bg">
+  <div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div>
+  <div class="grid"></div>
+</div>
+
+<div class="page">
+  <div class="card">
+
+    <!-- ADIM GÖSTERGESİ -->
+    <div class="steps" id="stepsBar">
+      <div class="step done" id="s1"><div class="step-dot">✓</div><div class="step-lbl">Hesap</div></div>
+      <div class="step-line done"></div>
+      <div class="step active" id="s2"><div class="step-dot">2</div><div class="step-lbl">Büro</div></div>
+      <div class="step-line" id="line2"></div>
+      <div class="step" id="s3"><div class="step-dot">3</div><div class="step-lbl">Plan</div></div>
+      <div class="step-line" id="line3"></div>
+      <div class="step" id="s4"><div class="step-dot">4</div><div class="step-lbl">Hazır</div></div>
+    </div>
+
+    <!-- ALERT -->
+    <div class="alert" id="alert">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span id="alertMsg"></span>
+    </div>
+
+    <!-- PANEL 1: BÜRO BİLGİLERİ -->
+    <div class="panel on" id="p1">
+      <div class="panel-title">Büronuzu kurun</div>
+      <div class="panel-sub">Ekibinizin parolalarını yönetmek için bir büro oluşturun. Büroya sonradan üye davet edebilirsiniz.</div>
+
+      <div class="field">
+        <label class="label">Büro Adı</label>
+        <div class="inp-wrap">
+          <input class="inp" type="text" id="bureauName" placeholder="Yılmaz Hukuk Bürosu" oninput="autoSlug(this.value)" />
+          <svg class="inp-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="label">Büro Adresi (URL)</label>
+        <div class="inp-wrap slug-wrap">
+          <span class="slug-prefix">govdag.com/</span>
+          <input class="inp inp-slug" type="text" id="bureauSlug" placeholder="yilmaz-hukuk" oninput="validateSlug(this.value)" />
+        </div>
+        <div class="hint" id="slugHint">Küçük harf, rakam ve tire kullanın. Sonradan değiştirilemez.</div>
+      </div>
+
+      <div class="field">
+        <label class="label">Sektör <span style="color:var(--t3);font-weight:400;text-transform:none;letter-spacing:0">(opsiyonel)</span></label>
+        <div class="inp-wrap">
+          <select class="inp" id="bureauSector" style="cursor:pointer;appearance:none;">
+            <option value="">Seçin...</option>
+            <option>Hukuk Bürosu</option>
+            <option>Mali Müşavirlik / SMMM</option>
+            <option>Muhasebe Bürosu</option>
+            <option>Yeminli Mali Müşavirlik</option>
+            <option>Mühendislik / Mimarlık</option>
+            <option>Sağlık / Klinik</option>
+            <option>Gayrimenkul</option>
+            <option>KOBİ / Şirket</option>
+            <option>Kişisel Kullanım</option>
+            <option>Diğer</option>
+          </select>
+          <svg class="inp-ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+      </div>
+
+      <button class="btn" id="btn1" onclick="goStep2()">
+        <span id="btn1Txt">Devam</span>
+        <div class="btn-spin" id="btn1Spin"></div>
+      </button>
+    </div>
+
+    <!-- PANEL 2: PLAN SEÇİMİ -->
+    <div class="panel" id="p2">
+      <div class="panel-title">Planınızı seçin</div>
+      <div class="panel-sub">14 gün ücretsiz deneme. Kredi kartı gerekmez.</div>
+
+      <div class="plan-grid">
+        <div class="plan-card selected" id="planStarter" onclick="selectPlan('starter')">
+          <div class="plan-badge">Önerilen</div>
+          <div class="plan-name">Starter</div>
+          <div class="plan-price">₺290<span>/yıl</span></div>
+          <div class="plan-feat">
+            5 kullanıcıya kadar<br>
+            Sınırsız klasör<br>
+            Sınırsız kayıt<br>
+            AES-256 şifreleme<br>
+            E-posta desteği
+          </div>
+        </div>
+        <div class="plan-card" id="planPro" onclick="selectPlan('pro')">
+          <div class="plan-name">Pro</div>
+          <div class="plan-price">₺590<span>/yıl</span></div>
+          <div class="plan-feat">
+            Sınırsız kullanıcı<br>
+            Sınırsız klasör<br>
+            Sınırsız kayıt<br>
+            AES-256 şifreleme<br>
+            İşlem günlüğü<br>
+            Öncelikli destek
+          </div>
+        </div>
+      </div>
+
+      <div class="hint" style="margin-bottom:20px;text-align:center;">
+        14 günlük deneme sonrası ödeme alınır. İstediğiniz zaman iptal edebilirsiniz.
+      </div>
+
+      <button class="btn" onclick="goStep3()">
+        <span>Devam</span>
+      </button>
+      <button class="btn-sec" onclick="goPanel('p1','s2')">← Geri</button>
+    </div>
+
+    <!-- PANEL 3: ÖZET & OLUŞTUR -->
+    <div class="panel" id="p3">
+      <div class="panel-title">Her şey hazır</div>
+      <div class="panel-sub">Büronuzu oluşturmak için aşağıdakileri onaylayın.</div>
+
+      <div class="summary" id="summary"></div>
+
+      <button class="btn" id="btn3" onclick="createBureau()">
+        <span id="btn3Txt">Büroyu Oluştur</span>
+        <div class="btn-spin" id="btn3Spin"></div>
+      </button>
+      <button class="btn-sec" onclick="goPanel('p2','s3')">← Geri</button>
+    </div>
+
+    <!-- PANEL 4: BAŞARI -->
+    <div class="panel" id="p4">
+      <div class="success-wrap">
+        <div class="success-ico">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#7eeaad" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div class="success-title">Büronuz hazır!</div>
+        <div class="success-sub">14 günlük ücretsiz denemeniz başladı. Şimdi master şifrenizi belirleyip kasanıza erişebilirsiniz.</div>
+        <div class="trial-badge">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          14 gün ücretsiz deneme aktif
+        </div>
+        <button class="btn" onclick="window.location.href='master-sifre.html'">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Master Şifremi Belirle
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════
+// YAPILANDIRMA
+// ════════════════════════════════════════════════════════════
+const SUPABASE_URL  = 'https://waqnacujnbnwxnmsjzxq.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndhcW5hY3VqbmJud3hubXNqenhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MjY5NjMsImV4cCI6MjA5MDMwMjk2M30.QWjJjcOxcvlwnMYiY_y87Juap9W9tIVY3VPLJB7zryM';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+// ════════════════════════════════════════════════════════════
+// OTURUM KONTROLÜ
+// ════════════════════════════════════════════════════════════
+let currentUser = null;
+let selectedPlan = 'starter';
+
+(async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { window.location.href = 'login.html'; return; }
+  currentUser = session.user;
+
+  // Zaten bürosu var mı?
+  const { data: membership } = await sb
+    .from('bureau_members')
+    .select('bureau_id')
+    .eq('user_id', currentUser.id)
+    .single();
+
+  if (membership) {
+    window.location.href = 'dashboard.html';
+    return;
+  }
+
+  // Önceki kayıttan gelen büro adı
+  const pendingBureau = sessionStorage.getItem('pending_bureau');
+  const pendingName   = sessionStorage.getItem('pending_name');
+  if (pendingBureau) {
+    document.getElementById('bureauName').value = pendingBureau;
+    autoSlug(pendingBureau);
+  }
+})();
+
+// ════════════════════════════════════════════════════════════
+// SLUG OTO-OLUŞTUR
+// ════════════════════════════════════════════════════════════
+function autoSlug(val) {
+  const slug = val
+    .toLowerCase()
+    .replace(/ğ/g,'g').replace(/ü/g,'u').replace(/ş/g,'s')
+    .replace(/ı/g,'i').replace(/ö/g,'o').replace(/ç/g,'c')
+    .replace(/[^a-z0-9\s-]/g,'')
+    .trim()
+    .replace(/\s+/g,'-')
+    .replace(/-+/g,'-')
+    .substring(0,40);
+  document.getElementById('bureauSlug').value = slug;
+  validateSlug(slug);
+}
+
+function validateSlug(val) {
+  const hint = document.getElementById('slugHint');
+  const inp  = document.getElementById('bureauSlug');
+  if (!val) { hint.textContent = 'Küçük harf, rakam ve tire kullanın. Sonradan değiştirilemez.'; hint.style.color=''; inp.classList.remove('err'); return; }
+  if (!/^[a-z0-9-]+$/.test(val)) {
+    hint.textContent = 'Sadece küçük harf, rakam ve tire kullanılabilir.';
+    hint.style.color = 'rgba(255,100,100,0.8)';
+    inp.classList.add('err');
+  } else if (val.length < 3) {
+    hint.textContent = 'En az 3 karakter olmalı.';
+    hint.style.color = 'rgba(255,100,100,0.8)';
+    inp.classList.add('err');
+  } else {
+    hint.textContent = `govdag.com/${val} — kullanılabilir görünüyor`;
+    hint.style.color = 'rgba(126,234,173,0.7)';
+    inp.classList.remove('err');
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// PLAN SEÇİMİ
+// ════════════════════════════════════════════════════════════
+function selectPlan(plan) {
+  selectedPlan = plan;
+  document.getElementById('planStarter').classList.toggle('selected', plan === 'starter');
+  document.getElementById('planPro').classList.toggle('selected', plan === 'pro');
+}
+
+// ════════════════════════════════════════════════════════════
+// ADIM GEÇİŞLERİ
+// ════════════════════════════════════════════════════════════
+function showAlert(msg, type='err') {
+  const el = document.getElementById('alert');
+  el.className = 'alert ' + type;
+  document.getElementById('alertMsg').textContent = msg;
+}
+function clearAlert() { document.getElementById('alert').className = 'alert'; }
+
+function goPanel(panelId, activeStep) {
+  clearAlert();
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('on'));
+  document.getElementById(panelId).classList.add('on');
+}
+
+function setStep(n) {
+  for (let i = 1; i <= 4; i++) {
+    const s = document.getElementById('s'+i);
+    s.classList.remove('done','active');
+    if (i < n)       s.classList.add('done');
+    else if (i === n) s.classList.add('active');
+  }
+  for (let i = 2; i <= 4; i++) {
+    const l = document.getElementById('line'+(i));
+    if (l) l.classList.toggle('done', i <= n);
+  }
+}
+
+function goStep2() {
+  clearAlert();
+  const name = document.getElementById('bureauName').value.trim();
+  const slug = document.getElementById('bureauSlug').value.trim();
+  if (!name) { showAlert('Büro adı boş bırakılamaz.'); return; }
+  if (!slug || slug.length < 3 || !/^[a-z0-9-]+$/.test(slug)) {
+    showAlert('Geçerli bir büro adresi girin.');
+    return;
+  }
+  goPanel('p2'); setStep(3);
+}
+
+function goStep3() {
+  clearAlert();
+  const name   = document.getElementById('bureauName').value.trim();
+  const slug   = document.getElementById('bureauSlug').value.trim();
+  const sector = document.getElementById('bureauSector').value;
+  const planLabel = selectedPlan === 'starter' ? 'Starter — ₺290/yıl' : 'Pro — ₺590/yıl';
+
+  document.getElementById('summary').innerHTML = `
+    <div class="sum-row"><span class="sum-lbl">Büro Adı</span><span class="sum-val">${name}</span></div>
+    <div class="sum-row"><span class="sum-lbl">Büro Adresi</span><span class="sum-val">govdag.com/${slug}</span></div>
+    ${sector ? `<div class="sum-row"><span class="sum-lbl">Sektör</span><span class="sum-val">${sector}</span></div>` : ''}
+    <div class="sum-row"><span class="sum-lbl">Plan</span><span class="sum-val accent">${planLabel}</span></div>
+    <div class="sum-row"><span class="sum-lbl">Deneme Süresi</span><span class="sum-val accent">14 gün ücretsiz</span></div>
+    <div class="sum-row"><span class="sum-lbl">Hesap</span><span class="sum-val">${currentUser?.email || ''}</span></div>
+  `;
+  goPanel('p3'); setStep(4);
+}
+
+// ════════════════════════════════════════════════════════════
+// BÜRO OLUŞTUR
+// ════════════════════════════════════════════════════════════
+async function createBureau() {
+  clearAlert();
+  const name   = document.getElementById('bureauName').value.trim();
+  const slug   = document.getElementById('bureauSlug').value.trim();
+  const sector = document.getElementById('bureauSector').value;
+
+  const btn  = document.getElementById('btn3');
+  const txt  = document.getElementById('btn3Txt');
+  const spin = document.getElementById('btn3Spin');
+  btn.disabled = true; txt.style.display = 'none'; spin.style.display = 'block';
+
+  try {
+    // 1. Slug benzersizlik kontrolü
+    const { data: existingList } = await sb
+      .from('bureaus')
+      .select('id')
+      .eq('slug', slug);
+
+    if (existingList && existingList.length > 0) {
+      showAlert('Bu büro adresi zaten kullanılıyor. Lütfen farklı bir adres deneyin.');
+      btn.disabled = false; txt.style.display = 'inline'; spin.style.display = 'none';
+      goPanel('p1'); setStep(2);
+      return;
+    }
+
+    // 2. Büro oluştur
+    const trialEnd = new Date();
+    trialEnd.setDate(trialEnd.getDate() + 14);
+
+    const { data: bureau, error: bureauErr } = await sb
+      .from('bureaus')
+      .insert({
+        name,
+        slug,
+        plan: 'trial',
+        trial_ends_at: trialEnd.toISOString(),
+      })
+      .select()
+      .single();
+
+    if (bureauErr) throw bureauErr;
+
+    // 3. Kullanıcıyı owner olarak ekle
+    const { error: memberErr } = await sb
+      .from('bureau_members')
+      .insert({
+        bureau_id: bureau.id,
+        user_id:   currentUser.id,
+        role:      'owner',
+      });
+
+    if (memberErr) throw memberErr;
+
+    // 4. Abonelik kaydı (trialing)
+    await sb.from('subscriptions').insert({
+      bureau_id: bureau.id,
+      status:    'trialing',
+      current_period_start: new Date().toISOString(),
+      current_period_end:   trialEnd.toISOString(),
+    });
+
+    // 5. Audit log
+    await sb.from('audit_logs').insert({
+      bureau_id:     bureau.id,
+      user_id:       currentUser.id,
+      action:        'create',
+      resource_type: 'bureau',
+      resource_id:   bureau.id,
+      resource_name: name,
+    });
+
+    // 6. Session'a bureau_id kaydet
+    sessionStorage.setItem('bureau_id', bureau.id);
+    sessionStorage.setItem('bureau_name', name);
+    sessionStorage.setItem('user_role', 'owner');
+    sessionStorage.removeItem('pending_bureau');
+    sessionStorage.removeItem('pending_name');
+
+    // Başarı ekranı
+    btn.disabled = false; txt.style.display = 'inline'; spin.style.display = 'none';
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('on'));
+    document.querySelectorAll('.step').forEach(s => s.classList.add('done'));
+    document.querySelectorAll('.step-line').forEach(l => l.classList.add('done'));
+    document.getElementById('p4').classList.add('on');
+
+  } catch (err) {
+    btn.disabled = false; txt.style.display = 'inline'; spin.style.display = 'none';
+    showAlert('Büro oluşturulamadı: ' + (err.message || 'Bilinmeyen hata'));
+  }
+}
+
+// Enter desteği
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  if (document.getElementById('p1').classList.contains('on')) goStep2();
+});
+</script>
+</body>
+</html>

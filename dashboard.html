@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Gövdağ — Dashboard</title>
+<link rel="icon" type="image/png" href="favicon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --glass:     rgba(255,255,255,0.08);
+  --glass-hov: rgba(255,255,255,0.12);
+  --glass-bd:  rgba(255,255,255,0.14);
+  --glass-bd2: rgba(255,255,255,0.22);
+  --glass-inp: rgba(255,255,255,0.06);
+  --t0:#ffffff;
+  --t1:rgba(255,255,255,0.80);
+  --t2:rgba(255,255,255,0.48);
+  --t3:rgba(255,255,255,0.24);
+  --accent:#7eeaad;
+  --accent-d:#3db87a;
+  --accent-g:rgba(126,234,173,0.15);
+  --accent-bd:rgba(126,234,173,0.30);
+  --err:rgba(255,100,100,0.85);
+  --sans:'Sora',sans-serif;
+  --mono:'JetBrains Mono',monospace;
+  --r:14px;--r2:20px;--r3:28px;
+}
+html,body{height:100%;font-family:var(--sans);background:#0a0b12;color:var(--t0);overflow:hidden;}
+input,button,select,textarea{font-family:var(--sans);}
+button{cursor:pointer;border:none;background:none;}
+
+/* ── ARKA PLAN ── */
+.bg{position:fixed;inset:0;z-index:0;overflow:hidden;background:linear-gradient(135deg,#0a0916,#0d1a2e 50%,#0a1218);}
+.orb{position:absolute;border-radius:50%;filter:blur(90px);animation:drift 14s ease-in-out infinite alternate;}
+.o1{width:600px;height:600px;background:radial-gradient(circle,#4a2db5,transparent 70%);top:-200px;left:-150px;opacity:0.45;}
+.o2{width:500px;height:500px;background:radial-gradient(circle,#0e5c9e,transparent 70%);bottom:-150px;right:-100px;opacity:0.40;animation-delay:-5s;}
+.o3{width:300px;height:300px;background:radial-gradient(circle,#1a7a4e,transparent 70%);top:35%;left:50%;opacity:0.30;animation-delay:-9s;}
+.grid{position:absolute;inset:0;opacity:0.03;background-image:linear-gradient(rgba(255,255,255,1) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,1) 1px,transparent 1px);background-size:44px 44px;}
+@keyframes drift{0%{transform:translate(0,0) scale(1);}50%{transform:translate(20px,-15px) scale(1.03);}100%{transform:translate(-10px,18px) scale(0.98);}}
+
+/* ── APP SHELL ── */
+#app{position:relative;z-index:1;height:100vh;display:flex;flex-direction:column;}
+
+/* ── TOPBAR ── */
+.topbar{
+  height:56px;flex-shrink:0;padding:0 20px;
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(255,255,255,0.06);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--glass-bd);
+}
+.tb-left{display:flex;align-items:center;gap:14px;}
+.tb-logo{display:flex;align-items:center;gap:8px;}
+.tb-logo-ico{
+  width:28px;height:28px;border-radius:8px;
+  background:linear-gradient(135deg,rgba(126,234,173,0.25),rgba(61,184,122,0.10));
+  border:1px solid rgba(126,234,173,0.30);
+  display:flex;align-items:center;justify-content:center;
+}
+.tb-logo-ico img{width:16px;height:16px;object-fit:contain;}
+.tb-logo-name{font-size:15px;font-weight:700;color:var(--t0);letter-spacing:-0.02em;}
+.tb-logo-name em{color:var(--accent);font-style:normal;}
+.tb-bureau{
+  font-size:12px;color:var(--t2);
+  padding:4px 10px;border-radius:50px;
+  background:rgba(255,255,255,0.06);border:1px solid var(--glass-bd);
+  font-family:var(--mono);
+}
+.tb-right{display:flex;align-items:center;gap:8px;}
+.tb-ico{
+  width:34px;height:34px;border-radius:10px;
+  background:var(--glass);border:1px solid var(--glass-bd);
+  display:flex;align-items:center;justify-content:center;
+  color:var(--t2);transition:all 0.15s;
+}
+.tb-ico:hover{background:var(--glass-hov);color:var(--t0);}
+.tb-ico.danger:hover{color:rgba(255,100,100,0.85);border-color:rgba(255,100,100,0.25);}
+.tb-user{
+  display:flex;align-items:center;gap:8px;
+  padding:4px 12px 4px 4px;
+  background:var(--glass);border:1px solid var(--glass-bd);border-radius:50px;
+}
+.tb-avatar{
+  width:26px;height:26px;border-radius:50%;
+  background:var(--accent-g);border:1px solid var(--accent-bd);
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;color:var(--accent);
+}
+.tb-uname{font-size:12px;color:var(--t1);}
+
+/* ── SHELL ── */
+.shell{flex:1;display:flex;overflow:hidden;padding:14px;gap:12px;}
+
+/* ── SOL PANEL ── */
+.lpanel{
+  width:252px;min-width:252px;display:flex;flex-direction:column;gap:10px;
+}
+.lp-top{
+  background:rgba(255,255,255,0.08);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border:1px solid var(--glass-bd2);border-radius:var(--r2);
+  padding:14px;
+}
+.lp-search{
+  width:100%;padding:9px 12px;
+  background:var(--glass-inp);border:1px solid var(--glass-bd);
+  border-radius:50px;font-size:13px;color:var(--t0);outline:none;
+  transition:border-color 0.2s;
+}
+.lp-search::placeholder{color:var(--t3);}
+.lp-search:focus{border-color:rgba(126,234,173,0.35);}
+
+.lp-list-wrap{
+  flex:1;overflow:hidden;display:flex;flex-direction:column;
+  background:rgba(255,255,255,0.07);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border:1px solid var(--glass-bd2);border-radius:var(--r2);
+}
+.lp-list-head{
+  padding:12px 14px 8px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.lp-list-lbl{font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--t3);}
+.lp-add-ico{
+  width:22px;height:22px;border-radius:6px;
+  background:var(--accent-g);border:1px solid var(--accent-bd);
+  display:flex;align-items:center;justify-content:center;
+  color:var(--accent);transition:all 0.15s;
+}
+.lp-add-ico:hover{background:rgba(126,234,173,0.22);}
+
+.folder-list{flex:1;overflow-y:auto;padding:0 6px 6px;}
+.folder-list::-webkit-scrollbar{width:3px;}
+.folder-list::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:2px;}
+
+.folder-item{
+  display:flex;align-items:center;gap:9px;
+  padding:9px 10px;border-radius:12px;cursor:pointer;
+  transition:all 0.15s;margin-bottom:2px;
+}
+.folder-item:hover{background:rgba(255,255,255,0.07);}
+.folder-item.on{background:rgba(126,234,173,0.10);border:1px solid rgba(126,234,173,0.20);}
+.folder-ava{
+  width:30px;height:30px;border-radius:9px;flex-shrink:0;
+  background:rgba(255,255,255,0.08);border:1px solid var(--glass-bd);
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;color:var(--t2);
+  transition:all 0.15s;
+}
+.folder-item.on .folder-ava{background:var(--accent-g);border-color:var(--accent-bd);color:var(--accent);}
+.folder-info{flex:1;overflow:hidden;}
+.folder-name{font-size:12px;font-weight:600;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.folder-item.on .folder-name{color:var(--accent);}
+.folder-desc{font-size:10px;color:var(--t3);margin-top:1px;}
+.folder-cnt{
+  font-size:10px;font-weight:700;font-family:var(--mono);
+  background:rgba(255,255,255,0.07);border:1px solid var(--glass-bd);
+  border-radius:50px;padding:2px 7px;color:var(--t2);flex-shrink:0;
+}
+.folder-item.on .folder-cnt{background:var(--accent-g);border-color:var(--accent-bd);color:var(--accent);}
+
+.lp-foot{padding:8px;}
+.lp-add-btn{
+  width:100%;padding:9px;border-radius:10px;
+  background:rgba(255,255,255,0.04);border:1px dashed rgba(255,255,255,0.12);
+  font-size:11px;font-weight:600;color:var(--t3);
+  transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:6px;
+}
+.lp-add-btn:hover{border-color:var(--accent-bd);color:var(--accent);background:var(--accent-g);}
+
+/* ── SAĞ PANEL ── */
+.rpanel{flex:1;display:flex;flex-direction:column;gap:10px;overflow:hidden;min-width:0;}
+
+.rp-head{
+  flex-shrink:0;padding:14px 20px;
+  background:rgba(255,255,255,0.08);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border:1px solid var(--glass-bd2);border-radius:var(--r2);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.rp-title{font-size:17px;font-weight:700;color:var(--t0);letter-spacing:-0.01em;}
+.rp-meta{font-size:11px;color:var(--t3);font-family:var(--mono);margin-top:3px;}
+.rp-btns{display:flex;gap:8px;}
+.g-btn{
+  padding:8px 16px;border-radius:50px;
+  background:var(--glass);border:1px solid var(--glass-bd);
+  font-size:11px;font-weight:600;color:var(--t2);
+  transition:all 0.15s;letter-spacing:0.03em;
+}
+.g-btn:hover{background:var(--glass-hov);color:var(--t0);}
+.g-btn.accent{background:var(--accent-g);border-color:var(--accent-bd);color:var(--accent);}
+.g-btn.accent:hover{background:rgba(126,234,173,0.22);}
+
+/* ── KATEGORİ FİLTRE ── */
+.cat-bar{
+  flex-shrink:0;display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;
+}
+.cat-bar::-webkit-scrollbar{display:none;}
+.cat-pill{
+  padding:6px 14px;border-radius:50px;white-space:nowrap;flex-shrink:0;
+  background:var(--glass);border:1px solid var(--glass-bd);
+  font-size:11px;font-weight:600;color:var(--t2);
+  transition:all 0.15s;
+}
+.cat-pill:hover{background:var(--glass-hov);color:var(--t1);}
+.cat-pill.on{background:var(--accent-g);border-color:var(--accent-bd);color:var(--accent);}
+
+/* ── KARTLAR ── */
+.cards-pane{
+  flex:1;overflow:hidden;
+  background:rgba(255,255,255,0.06);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border:1px solid var(--glass-bd2);border-radius:var(--r2);
+}
+.cards-scroll{height:100%;overflow-y:auto;padding:16px 18px;}
+.cards-scroll::-webkit-scrollbar{width:4px;}
+.cards-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:2px;}
+
+.grp-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.grp-pill{
+  padding:3px 12px;border-radius:50px;font-size:10px;font-weight:700;
+  letter-spacing:0.08em;text-transform:uppercase;
+  background:var(--glass);border:1px solid var(--glass-bd);color:var(--t2);
+}
+.grp-line{flex:1;height:1px;background:rgba(255,255,255,0.07);}
+
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:22px;}
+
+.site-card{
+  background:rgba(255,255,255,0.07);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  border:1px solid var(--glass-bd);border-radius:var(--r2);
+  padding:15px;transition:all 0.2s;position:relative;overflow:hidden;
+}
+.site-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.2),transparent);}
+.site-card:hover{background:rgba(255,255,255,0.10);border-color:var(--glass-bd2);transform:translateY(-1px);box-shadow:0 8px 32px rgba(0,0,0,0.3);}
+
+.sc-head{display:flex;align-items:flex-start;gap:9px;margin-bottom:12px;}
+.sc-ico{
+  width:36px;height:36px;border-radius:10px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:10px;font-weight:700;
+  border:1px solid rgba(255,255,255,0.12);
+}
+.sc-nameblock{flex:1;overflow:hidden;}
+.sc-name{font-size:13px;font-weight:600;color:var(--t0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sc-label{font-size:10px;color:var(--t3);margin-top:1px;}
+.sc-url{font-size:10px;color:var(--t3);font-family:var(--mono);}
+.sc-goto{
+  width:26px;height:26px;border-radius:7px;flex-shrink:0;
+  background:rgba(255,255,255,0.06);border:1px solid var(--glass-bd);
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;color:var(--t2);text-decoration:none;transition:all 0.15s;
+}
+.sc-goto:hover{background:var(--accent-g);border-color:var(--accent-bd);color:var(--accent);}
+
+.sc-div{height:1px;background:rgba(255,255,255,0.06);margin-bottom:11px;}
+
+.sc-field{margin-bottom:9px;}
+.sc-field:last-child{margin-bottom:0;}
+.sc-lbl{font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--t3);margin-bottom:4px;}
+.sc-row{display:flex;align-items:center;gap:5px;}
+.sc-val{
+  flex:1;min-width:0;font-family:var(--mono);font-size:11px;color:var(--t1);
+  background:rgba(0,0,0,0.20);border:1px solid rgba(255,255,255,0.07);
+  border-radius:7px;padding:5px 8px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.sc-val.loading{color:var(--t3);font-style:italic;font-family:var(--sans);font-size:11px;}
+.sc-action{
+  padding:5px 8px;border-radius:7px;
+  background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.10);
+  font-size:10px;font-weight:600;color:var(--t2);
+  transition:all 0.15s;flex-shrink:0;white-space:nowrap;
+}
+.sc-action:hover{background:rgba(255,255,255,0.10);color:var(--t0);}
+.sc-action.ok{background:var(--accent-g);color:var(--accent);border-color:var(--accent-bd);}
+
+/* ── BOŞ DURUM ── */
+.empty{
+  height:100%;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:12px;
+}
+.empty-ring{
+  width:60px;height:60px;border-radius:50%;
+  background:var(--glass);border:1px solid var(--glass-bd);
+  display:flex;align-items:center;justify-content:center;
+}
+.empty-txt{font-size:15px;font-weight:600;color:var(--t2);}
+.empty-sub{font-size:12px;color:var(--t3);}
+
+/* ── MODAL ── */
+.modal-bg{
+  position:fixed;inset:0;z-index:50;
+  background:rgba(0,0,0,0.65);
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  display:none;align-items:center;justify-content:center;padding:20px;
+}
+.modal-bg.open{display:flex;}
+.modal{
+  width:100%;max-width:500px;
+  background:rgba(12,14,24,0.90);
+  backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);
+  border:1px solid var(--glass-bd2);border-radius:var(--r3);
+  padding:28px 30px;
+  box-shadow:0 40px 80px rgba(0,0,0,0.7),inset 0 1px 0 rgba(255,255,255,0.12);
+  animation:modalIn 0.25s cubic-bezier(0.22,1,0.36,1);
+  max-height:90vh;overflow-y:auto;
+}
+@keyframes modalIn{from{opacity:0;transform:scale(0.96) translateY(12px)}to{opacity:1;transform:none}}
+.modal-title{font-size:17px;font-weight:700;color:var(--t0);margin-bottom:6px;}
+.modal-sub{font-size:12px;color:var(--t2);margin-bottom:22px;}
+
+.m-field{margin-bottom:14px;}
+.m-label{font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--t2);margin-bottom:6px;display:block;}
+.m-inp{
+  width:100%;padding:10px 13px;
+  background:var(--glass-inp);border:1px solid var(--glass-bd);border-radius:var(--r);
+  font-size:13px;color:var(--t0);outline:none;transition:border-color 0.2s;
+}
+.m-inp:focus{border-color:rgba(126,234,173,0.40);}
+.m-inp::placeholder{color:var(--t3);}
+.m-select{width:100%;padding:10px 13px;background:var(--glass-inp);border:1px solid var(--glass-bd);border-radius:var(--r);font-size:13px;color:var(--t0);outline:none;appearance:none;cursor:pointer;}
+.m-select option{background:#0d1117;color:#fff;}
+
+/* Dinamik alanlar */
+.fields-wrap{margin-bottom:14px;}
+.dyn-field{
+  display:flex;align-items:center;gap:8px;
+  background:rgba(255,255,255,0.04);border:1px solid var(--glass-bd);
+  border-radius:var(--r);padding:10px 12px;margin-bottom:8px;
+}
+.dyn-field-name{flex:1;min-width:0;background:transparent;border:none;outline:none;font-size:12px;color:var(--t2);font-family:var(--mono);}
+.dyn-field-val{flex:2;min-width:0;background:transparent;border:none;outline:none;font-size:13px;color:var(--t0);}
+.dyn-field-sep{width:1px;height:20px;background:var(--glass-bd);flex-shrink:0;}
+.dyn-secret{
+  width:24px;height:24px;border-radius:6px;flex-shrink:0;
+  background:rgba(255,255,255,0.06);border:1px solid var(--glass-bd);
+  display:flex;align-items:center;justify-content:center;color:var(--t3);
+  transition:all 0.15s;
+}
+.dyn-secret.on{background:var(--accent-g);border-color:var(--accent-bd);color:var(--accent);}
+.dyn-del{
+  width:24px;height:24px;border-radius:6px;flex-shrink:0;
+  background:rgba(255,100,100,0.06);border:1px solid rgba(255,100,100,0.15);
+  display:flex;align-items:center;justify-content:center;color:rgba(255,100,100,0.5);
+  transition:all 0.15s;
+}
+.dyn-del:hover{background:rgba(255,100,100,0.12);color:rgba(255,100,100,0.85);}
+
+.add-field-btn{
+  width:100%;padding:8px;border-radius:var(--r);
+  background:transparent;border:1px dashed rgba(255,255,255,0.12);
+  font-size:11px;font-weight:600;color:var(--t3);
+  transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:6px;
+  margin-bottom:14px;
+}
+.add-field-btn:hover{border-color:var(--accent-bd);color:var(--accent);}
+
+.m-foot{display:flex;gap:8px;justify-content:flex-end;padding-top:16px;border-top:1px solid var(--glass-bd);}
+.m-cancel{padding:9px 18px;border-radius:50px;background:var(--glass);border:1px solid var(--glass-bd);font-size:12px;font-weight:600;color:var(--t2);transition:all 0.15s;}
+.m-cancel:hover{background:var(--glass-hov);color:var(--t0);}
+.m-save{padding:9px 22px;border-radius:50px;background:var(--accent-g);border:1px solid var(--accent-bd);font-size:12px;font-weight:700;color:var(--accent);transition:all 0.15s;}
+.m-save:hover{background:rgba(126,234,173,0.22);}
+.m-save:disabled{opacity:0.45;cursor:not-allowed;}
+
+/* ── TOAST ── */
+.toast{
+  position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(12px);
+  background:rgba(10,12,22,0.90);backdrop-filter:blur(20px);
+  border:1px solid var(--glass-bd2);border-radius:50px;
+  padding:9px 18px;font-size:12px;font-weight:600;color:var(--t1);
+  display:flex;align-items:center;gap:8px;
+  opacity:0;transition:all 0.3s cubic-bezier(0.34,1.5,0.64,1);z-index:200;
+  pointer-events:none;
+}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);}
+
+/* ── YÜKLEME ── */
+.skeleton{
+  height:14px;border-radius:4px;
+  background:linear-gradient(90deg,rgba(255,255,255,0.04) 25%,rgba(255,255,255,0.08) 50%,rgba(255,255,255,0.04) 75%);
+  background-size:200% 100%;
+  animation:shimmer 1.5s infinite;
+}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+</style>
+</head>
+<body>
+
+<div class="bg">
+  <div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div>
+  <div class="grid"></div>
+</div>
+
+<div id="app">
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="tb-left">
+      <div class="tb-logo">
+        <div class="tb-logo-ico"><img src="favicon.png" alt="g" /></div>
+        <div class="tb-logo-name">gövda<em>ğ</em></div>
+      </div>
+      <div class="tb-bureau" id="tbBureau">—</div>
+    </div>
+    <div class="tb-right">
+      <button class="tb-ico" onclick="openFolderModal()" title="Yeni klasör">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+      </button>
+      <button class="tb-ico" onclick="goAdmin()" title="Admin Paneli" id="adminBtn" style="display:none;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+      <div class="tb-user">
+        <div class="tb-avatar" id="tbAvatar">?</div>
+        <div class="tb-uname" id="tbUname">—</div>
+      </div>
+      <button class="tb-ico danger" onclick="doSignOut()" title="Çıkış">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- SHELL -->
+  <div class="shell">
+    <!-- SOL: KLASÖR LİSTESİ -->
+    <div class="lpanel">
+      <div class="lp-top">
+        <input class="lp-search" type="text" placeholder="Klasör ara…" id="folderSearch" oninput="filterFolders(this.value)" />
+      </div>
+      <div class="lp-list-wrap">
+        <div class="lp-list-head">
+          <span class="lp-list-lbl">Klasörler</span>
+          <button class="lp-add-ico" onclick="openFolderModal()" title="Yeni klasör">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+        </div>
+        <div class="folder-list" id="folderList">
+          <div style="padding:20px 14px;font-size:12px;color:var(--t3);">Yükleniyor…</div>
+        </div>
+        <div class="lp-foot">
+          <button class="lp-add-btn" onclick="openFolderModal()">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Yeni Klasör
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SAĞ: KİMLİK KARTLARI -->
+    <div class="rpanel">
+      <div class="rp-head">
+        <div>
+          <div class="rp-title" id="rpTitle">Klasör seçin</div>
+          <div class="rp-meta" id="rpMeta">Soldan bir klasör seçerek başlayın</div>
+        </div>
+        <div class="rp-btns" id="rpBtns" style="display:none;">
+          <button class="g-btn" onclick="showToast('Dışa aktarma — yakında')">↓ Aktar</button>
+          <button class="g-btn accent" onclick="openCredModal()">+ Kayıt Ekle</button>
+        </div>
+      </div>
+
+      <div class="cat-bar" id="catBar" style="display:none;"></div>
+
+      <div class="cards-pane">
+        <div class="cards-scroll" id="cardsScroll">
+          <div class="empty">
+            <div class="empty-ring">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            </div>
+            <div class="empty-txt">Klasör seçilmedi</div>
+            <div class="empty-sub">Soldan bir klasör seçerek başlayın</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- KLASÖR MODAL -->
+<div class="modal-bg" id="folderModal">
+  <div class="modal">
+    <div class="modal-title">Yeni Klasör</div>
+    <div class="modal-sub">Kişi, kurum veya proje bazında klasör oluşturun.</div>
+    <div class="m-field"><label class="m-label">Klasör Adı</label><input class="m-inp" type="text" id="fName" placeholder="Ahmet Yılmaz Ltd. Şti." /></div>
+    <div class="m-field"><label class="m-label">Açıklama <span style="color:var(--t3);font-weight:400;text-transform:none">(opsiyonel)</span></label><input class="m-inp" type="text" id="fDesc" placeholder="VKN: 1234567890" /></div>
+    <div class="m-foot">
+      <button class="m-cancel" onclick="closeModal('folderModal')">İptal</button>
+      <button class="m-save" onclick="saveFolder()">Oluştur</button>
+    </div>
+  </div>
+</div>
+
+<!-- KİMLİK KAYIT MODAL -->
+<div class="modal-bg" id="credModal">
+  <div class="modal">
+    <div class="modal-title">Yeni Kayıt Ekle</div>
+    <div class="modal-sub">Site bilgilerini ve giriş alanlarını ekleyin.</div>
+
+    <div class="m-field"><label class="m-label">Site Adı</label><input class="m-inp" type="text" id="cSite" placeholder="SGK e-Bildirge" /></div>
+    <div class="m-field"><label class="m-label">URL</label><input class="m-inp" type="text" id="cUrl" placeholder="sgk.gov.tr" /></div>
+    <div class="m-field">
+      <label class="m-label">Kategori</label>
+      <select class="m-select" id="cCat">
+        <option>Vergi &amp; SGK</option>
+        <option>e-Fatura &amp; KEP</option>
+        <option>Ticaret Sicili</option>
+        <option>Banka &amp; Finans</option>
+        <option>E-posta &amp; İletişim</option>
+        <option>Diğer</option>
+      </select>
+    </div>
+    <div class="m-field"><label class="m-label">Etiket <span style="color:var(--t3);font-weight:400;text-transform:none">(opsiyonel, ör: "Patron Girişi")</span></label><input class="m-inp" type="text" id="cLabel" placeholder="Patron Girişi" /></div>
+
+    <label class="m-label">Giriş Alanları</label>
+    <div class="fields-wrap" id="fieldsWrap"></div>
+    <button class="add-field-btn" onclick="addField()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Alan Ekle
+    </button>
+
+    <div class="m-foot">
+      <button class="m-cancel" onclick="closeModal('credModal')">İptal</button>
+      <button class="m-save" id="saveCredBtn" onclick="saveCred()">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"><div class="toast-dot"></div><span id="toastMsg"></span></div>
+
+<script>
+// ════════════════════════════════════════════════════════════
+// YAPILANDIRMA
+// ════════════════════════════════════════════════════════════
+const SUPABASE_URL  = 'https://waqnacujnbnwxnmsjzxq.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndhcW5hY3VqbmJud3hubXNqenhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MjY5NjMsImV4cCI6MjA5MDMwMjk2M30.QWjJjcOxcvlwnMYiY_y87Juap9W9tIVY3VPLJB7zryM';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+const VAULT_KEY = '__govdag_vault_key__';
+
+const CAT_COLORS = {
+  'Vergi & SGK':          {bg:'rgba(128,200,255,0.12)',bd:'rgba(128,200,255,0.22)',cl:'#80c8ff'},
+  'e-Fatura & KEP':       {bg:'rgba(196,168,255,0.12)',bd:'rgba(196,168,255,0.22)',cl:'#c4a8ff'},
+  'Ticaret Sicili':       {bg:'rgba(126,234,173,0.12)',bd:'rgba(126,234,173,0.22)',cl:'#7eeaad'},
+  'Banka & Finans':       {bg:'rgba(255,201,107,0.12)',bd:'rgba(255,201,107,0.22)',cl:'#ffc96b'},
+  'E-posta & İletişim':   {bg:'rgba(255,150,150,0.12)',bd:'rgba(255,150,150,0.22)',cl:'#ff9696'},
+  'Diğer':                {bg:'rgba(255,255,255,0.06)',bd:'rgba(255,255,255,0.12)',cl:'rgba(255,255,255,0.5)'},
+};
+
+// ── STATE ──
+let currentUser  = null;
+let bureauId     = null;
+let bureauName   = null;
+let vaultKey     = null;
+let folders      = [];
+let activeFolderId = null;
+let credentials  = [];
+let activeCat    = 'Tümü';
+let decrypted    = {}; // {fieldId: value}
+let toastTimer;
+
+// ════════════════════════════════════════════════════════════
+// BAŞLANGIÇ
+// ════════════════════════════════════════════════════════════
+(async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { window.location.href = 'login.html'; return; }
+  currentUser = session.user;
+
+  // Vault key kontrolü
+  vaultKey = window[VAULT_KEY];
+  if (!vaultKey) { window.location.href = 'master-sifre.html'; return; }
+
+  // Büro bilgisi
+  const { data: member } = await sb
+    .from('bureau_members')
+    .select('bureau_id, role, bureaus(name)')
+    .eq('user_id', currentUser.id)
+    .single();
+
+  if (!member) { window.location.href = 'onboarding.html'; return; }
+
+  bureauId   = member.bureau_id;
+  bureauName = member.bureaus?.name || 'Büro';
+
+  // UI güncelle
+  const email = currentUser.email || '';
+  const name  = currentUser.user_metadata?.full_name || email.split('@')[0];
+  document.getElementById('tbBureau').textContent  = bureauName;
+  document.getElementById('tbUname').textContent   = name.split(' ')[0];
+  document.getElementById('tbAvatar').textContent  = name[0]?.toUpperCase() || '?';
+
+  // Admin/owner ise admin butonunu göster
+  if (['owner','admin'].includes(member.role)) {
+    document.getElementById('adminBtn').style.display = 'flex';
+  }
+
+  await loadFolders();
+})();
+
+// ════════════════════════════════════════════════════════════
+// KLASÖRLER
+// ════════════════════════════════════════════════════════════
+async function loadFolders() {
+  const { data, error } = await sb
+    .from('folders')
+    .select('id, name, description, color')
+    .eq('bureau_id', bureauId)
+    .order('sort_order')
+    .order('created_at');
+
+  if (error) { showToast('Klasörler yüklenemedi'); return; }
+  folders = data || [];
+  renderFolders(folders);
+}
+
+function renderFolders(list) {
+  const el = document.getElementById('folderList');
+  if (!list.length) {
+    el.innerHTML = `<div style="padding:16px 14px;font-size:12px;color:var(--t3);text-align:center;">Henüz klasör yok.<br/>Bir tane oluşturun.</div>`;
+    return;
+  }
+  el.innerHTML = list.map(f => {
+    const cnt = f._credCount ?? '';
+    return `<div class="folder-item ${activeFolderId===f.id?'on':''}" onclick="selectFolder('${f.id}')">
+      <div class="folder-ava">${f.name[0]?.toUpperCase()}</div>
+      <div class="folder-info">
+        <div class="folder-name">${f.name}</div>
+        ${f.description ? `<div class="folder-desc">${f.description}</div>` : ''}
+      </div>
+      <div class="folder-cnt" id="fcnt_${f.id}">${cnt}</div>
+    </div>`;
+  }).join('');
+}
+
+function filterFolders(q) {
+  const f = q ? folders.filter(x => x.name.toLowerCase().includes(q.toLowerCase())) : folders;
+  renderFolders(f);
+}
+
+async function selectFolder(id) {
+  activeFolderId = id;
+  activeCat = 'Tümü';
+  const folder = folders.find(f => f.id === id);
+  document.getElementById('rpTitle').textContent = folder?.name || '—';
+  document.getElementById('rpMeta').textContent  = folder?.description || '';
+  document.getElementById('rpBtns').style.display = 'flex';
+  renderFolders(folders);
+  await loadCredentials(id);
+}
+
+// ════════════════════════════════════════════════════════════
+// KİMLİK KAYITLARI
+// ════════════════════════════════════════════════════════════
+async function loadCredentials(folderId) {
+  document.getElementById('cardsScroll').innerHTML = `<div style="padding:24px;font-size:12px;color:var(--t3);">Yükleniyor…</div>`;
+
+  const { data, error } = await sb
+    .from('credentials')
+    .select('id, site_name, site_url, category, label, credential_fields(id, field_name, encrypted_value, is_secret, sort_order)')
+    .eq('folder_id', folderId)
+    .order('sort_order')
+    .order('created_at');
+
+  if (error) { showToast('Kayıtlar yüklenemedi'); return; }
+  credentials = data || [];
+
+  // Klasör sayısını güncelle
+  const cnt = credentials.length;
+  const cntEl = document.getElementById('fcnt_' + folderId);
+  if (cntEl) cntEl.textContent = cnt;
+
+  // Kategori filtresi
+  renderCatBar();
+  renderCards();
+}
+
+function renderCatBar() {
+  const cats = ['Tümü', ...new Set(credentials.map(c => c.category).filter(Boolean))];
+  const bar  = document.getElementById('catBar');
+  bar.style.display = cats.length > 2 ? 'flex' : 'none';
+  bar.innerHTML = cats.map(c =>
+    `<button class="cat-pill ${activeCat===c?'on':''}" onclick="setCat('${c}')">${c}</button>`
+  ).join('');
+}
+
+function setCat(cat) {
+  activeCat = cat;
+  renderCatBar();
+  renderCards();
+}
+
+function renderCards() {
+  const scroll = document.getElementById('cardsScroll');
+  const filtered = activeCat === 'Tümü' ? credentials : credentials.filter(c => c.category === activeCat);
+
+  if (!filtered.length) {
+    scroll.innerHTML = `<div class="empty">
+      <div class="empty-ring"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+      <div class="empty-txt">Kayıt bulunamadı</div>
+      <div class="empty-sub">+ Kayıt Ekle butonunu kullanın</div>
+    </div>`;
+    return;
+  }
+
+  // Kategoriye göre grupla
+  const groups = {};
+  filtered.forEach(c => {
+    const cat = c.category || 'Diğer';
+    if (!groups[cat]) groups[cat] = [];
+    groups[cat].push(c);
+  });
+
+  scroll.innerHTML = Object.entries(groups).map(([cat, creds]) => {
+    const cc = CAT_COLORS[cat] || CAT_COLORS['Diğer'];
+    return `
+      <div class="grp-head">
+        <div class="grp-pill" style="color:${cc.cl};border-color:${cc.bd}">${cat}</div>
+        <div class="grp-line"></div>
+      </div>
+      <div class="cards-grid">
+        ${creds.map(c => renderCard(c, cc)).join('')}
+      </div>`;
+  }).join('');
+}
+
+function renderCard(c, cc) {
+  const fields = (c.credential_fields || []).sort((a,b) => a.sort_order - b.sort_order);
+  const kisa   = (c.site_name || '').substring(0,3).toUpperCase();
+  const label  = c.label ? `<div class="sc-label">${c.label}</div>` : '';
+
+  const fieldsHtml = fields.map(f => {
+    const isSecret = f.is_secret;
+    const val      = decrypted[f.id];
+    const shown    = val !== undefined;
+    const display  = shown ? val : (isSecret ? '••••••••' : 'Göster');
+    return `
+      <div class="sc-field">
+        <div class="sc-lbl">${f.field_name}</div>
+        <div class="sc-row">
+          <div class="sc-val ${val===undefined&&isSecret?'':''}' id="fv_${f.id}">${display}</div>
+          ${isSecret ? `<button class="sc-action" id="fb_${f.id}" onclick="toggleField('${f.id}','${c.id}')">${shown?'Gizle':'Göster'}</button>` : ''}
+          <button class="sc-action" id="cp_${f.id}" onclick="copyField('${f.id}','${c.id}')">Kopyala</button>
+        </div>
+      </div>`;
+  }).join('');
+
+  return `<div class="site-card">
+    <div class="sc-head">
+      <div class="sc-ico" style="background:${cc.bg};border-color:${cc.bd};color:${cc.cl}">${kisa}</div>
+      <div class="sc-nameblock">
+        <div class="sc-name">${c.site_name}</div>
+        ${label}
+        ${c.site_url ? `<div class="sc-url">${c.site_url}</div>` : ''}
+      </div>
+      ${c.site_url ? `<a class="sc-goto" href="https://${c.site_url}" target="_blank" title="Siteye git">↗</a>` : ''}
+    </div>
+    <div class="sc-div"></div>
+    ${fieldsHtml}
+  </div>`;
+}
+
+// ════════════════════════════════════════════════════════════
+// AES-256-GCM ŞIFRE ÇÖZME
+// ════════════════════════════════════════════════════════════
+function hexToBuffer(hex) {
+  const arr = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < arr.length; i++) arr[i] = parseInt(hex.slice(i*2,i*2+2),16);
+  return arr;
+}
+function bufferToHex(buf) {
+  return Array.from(buf).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+async function encryptField(plaintext) {
+  const iv  = crypto.getRandomValues(new Uint8Array(12));
+  const enc = new TextEncoder().encode(plaintext);
+  const ct  = await crypto.subtle.encrypt({name:'AES-GCM',iv}, vaultKey, enc);
+  return bufferToHex(iv) + ':' + bufferToHex(new Uint8Array(ct));
+}
+
+async function decryptField(blob) {
+  const [ivHex, ctHex] = blob.split(':');
+  const iv = hexToBuffer(ivHex);
+  const ct = hexToBuffer(ctHex);
+  const pt = await crypto.subtle.decrypt({name:'AES-GCM',iv}, vaultKey, ct);
+  return new TextDecoder().decode(pt);
+}
+
+async function toggleField(fieldId, credId) {
+  if (decrypted[fieldId] !== undefined) {
+    // Gizle
+    delete decrypted[fieldId];
+    const el = document.getElementById('fv_' + fieldId);
+    const btn = document.getElementById('fb_' + fieldId);
+    if (el) el.textContent = '••••••••';
+    if (btn) btn.textContent = 'Göster';
+    return;
+  }
+
+  // Şifreyi çöz
+  const cred  = credentials.find(c => c.id === credId);
+  const field = cred?.credential_fields?.find(f => f.id === fieldId);
+  if (!field) return;
+
+  const btn = document.getElementById('fb_' + fieldId);
+  if (btn) { btn.textContent = '…'; btn.disabled = true; }
+
+  try {
+    const plain = await decryptField(field.encrypted_value);
+    decrypted[fieldId] = plain;
+
+    const el = document.getElementById('fv_' + fieldId);
+    if (el) el.textContent = plain;
+    if (btn) { btn.textContent = 'Gizle'; btn.disabled = false; }
+
+    // Audit log
+    await sb.from('audit_logs').insert({
+      bureau_id: bureauId, user_id: currentUser.id,
+      action: 'view', resource_type: 'credential_field',
+      resource_id: credId, resource_name: field.field_name,
+    });
+  } catch {
+    if (btn) { btn.textContent = 'Hata'; btn.disabled = false; }
+    showToast('Şifre çözülemedi — master şifre doğru mu?');
+  }
+}
+
+async function copyField(fieldId, credId) {
+  const cred  = credentials.find(c => c.id === credId);
+  const field = cred?.credential_fields?.find(f => f.id === fieldId);
+  if (!field) return;
+
+  const btn = document.getElementById('cp_' + fieldId);
+  if (btn) { btn.textContent = '…'; btn.disabled = true; }
+
+  try {
+    let plain = decrypted[fieldId];
+    if (plain === undefined) plain = await decryptField(field.encrypted_value);
+
+    await navigator.clipboard.writeText(plain);
+    if (btn) { btn.textContent = '✓'; btn.classList.add('ok'); btn.disabled = false; }
+    setTimeout(() => { if (btn) { btn.textContent = 'Kopyala'; btn.classList.remove('ok'); } }, 1600);
+    showToast('Panoya kopyalandı');
+
+    // Audit log
+    await sb.from('audit_logs').insert({
+      bureau_id: bureauId, user_id: currentUser.id,
+      action: 'copy', resource_type: 'credential_field',
+      resource_id: credId, resource_name: field.field_name,
+    });
+  } catch {
+    if (btn) { btn.textContent = 'Kopyala'; btn.disabled = false; }
+    showToast('Kopyalanamadı');
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// KLASÖR KAYDET
+// ════════════════════════════════════════════════════════════
+async function saveFolder() {
+  const name = document.getElementById('fName').value.trim();
+  const desc = document.getElementById('fDesc').value.trim();
+  if (!name) { showToast('Klasör adı boş olamaz'); return; }
+
+  const { data, error } = await sb.from('folders').insert({
+    bureau_id: bureauId, name, description: desc || null,
+    created_by: currentUser.id,
+  }).select().single();
+
+  if (error) { showToast('Klasör oluşturulamadı: ' + error.message); return; }
+
+  folders.push(data);
+  renderFolders(folders);
+  closeModal('folderModal');
+  document.getElementById('fName').value = '';
+  document.getElementById('fDesc').value = '';
+  showToast(`"${name}" klasörü oluşturuldu`);
+  selectFolder(data.id);
+}
+
+// ════════════════════════════════════════════════════════════
+// DİNAMİK ALANLAR
+// ════════════════════════════════════════════════════════════
+let fieldRows = [];
+
+function openCredModal() {
+  if (!activeFolderId) { showToast('Önce bir klasör seçin'); return; }
+  fieldRows = [];
+  document.getElementById('cSite').value  = '';
+  document.getElementById('cUrl').value   = '';
+  document.getElementById('cLabel').value = '';
+  document.getElementById('fieldsWrap').innerHTML = '';
+
+  // Varsayılan alanlar
+  addField('Kullanıcı Adı', '', false);
+  addField('Şifre', '', true);
+
+  document.getElementById('credModal').classList.add('open');
+  setTimeout(() => document.getElementById('cSite').focus(), 100);
+}
+
+function addField(name='', val='', secret=true) {
+  const id = 'fr_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
+  fieldRows.push({id, secret});
+
+  const wrap = document.getElementById('fieldsWrap');
+  const div  = document.createElement('div');
+  div.className = 'dyn-field';
+  div.id = id;
+  div.innerHTML = `
+    <input class="dyn-field-name" type="text" placeholder="Alan adı" value="${name}" id="${id}_name" />
+    <div class="dyn-field-sep"></div>
+    <input class="dyn-field-val" type="${secret?'password':'text'}" placeholder="Değer" value="${val}" id="${id}_val" />
+    <button class="dyn-secret ${secret?'on':''}" title="Gizli alan" onclick="toggleSecret('${id}')" id="${id}_sec">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    </button>
+    <button class="dyn-del" onclick="removeField('${id}')">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>`;
+  wrap.appendChild(div);
+}
+
+function toggleSecret(id) {
+  const row = fieldRows.find(r => r.id === id);
+  if (!row) return;
+  row.secret = !row.secret;
+  const btn = document.getElementById(id + '_sec');
+  const inp = document.getElementById(id + '_val');
+  if (btn) btn.classList.toggle('on', row.secret);
+  if (inp) inp.type = row.secret ? 'password' : 'text';
+}
+
+function removeField(id) {
+  fieldRows = fieldRows.filter(r => r.id !== id);
+  const el = document.getElementById(id);
+  if (el) el.remove();
+}
+
+// ════════════════════════════════════════════════════════════
+// KİMLİK KAYDET
+// ════════════════════════════════════════════════════════════
+async function saveCred() {
+  const siteName = document.getElementById('cSite').value.trim();
+  const siteUrl  = document.getElementById('cUrl').value.trim();
+  const category = document.getElementById('cCat').value;
+  const label    = document.getElementById('cLabel').value.trim();
+
+  if (!siteName) { showToast('Site adı boş olamaz'); return; }
+
+  const btn = document.getElementById('saveCredBtn');
+  btn.disabled = true; btn.textContent = 'Kaydediliyor…';
+
+  try {
+    // 1. Credential oluştur
+    const { data: cred, error: credErr } = await sb.from('credentials').insert({
+      folder_id:  activeFolderId,
+      bureau_id:  bureauId,
+      site_name:  siteName,
+      site_url:   siteUrl || null,
+      category:   category,
+      label:      label || null,
+      created_by: currentUser.id,
+    }).select().single();
+
+    if (credErr) throw credErr;
+
+    // 2. Alanları şifrele ve kaydet
+    const fieldInserts = [];
+    for (let i = 0; i < fieldRows.length; i++) {
+      const row  = fieldRows[i];
+      const name = document.getElementById(row.id + '_name')?.value.trim();
+      const val  = document.getElementById(row.id + '_val')?.value;
+      if (!name || val === undefined) continue;
+
+      const encrypted = await encryptField(val);
+      fieldInserts.push({
+        credential_id:   cred.id,
+        bureau_id:       bureauId,
+        field_name:      name,
+        encrypted_value: encrypted,
+        is_secret:       row.secret,
+        sort_order:      i,
+      });
+    }
+
+    if (fieldInserts.length) {
+      const { error: fErr } = await sb.from('credential_fields').insert(fieldInserts);
+      if (fErr) throw fErr;
+    }
+
+    // 3. Audit log
+    await sb.from('audit_logs').insert({
+      bureau_id: bureauId, user_id: currentUser.id,
+      action: 'create', resource_type: 'credential',
+      resource_id: cred.id, resource_name: siteName,
+    });
+
+    closeModal('credModal');
+    showToast(`"${siteName}" kaydedildi`);
+    await loadCredentials(activeFolderId);
+
+  } catch (err) {
+    showToast('Kayıt başarısız: ' + (err.message || 'Hata'));
+  } finally {
+    btn.disabled = false; btn.textContent = 'Kaydet';
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// YARDIMCI
+// ════════════════════════════════════════════════════════════
+function openFolderModal() {
+  document.getElementById('folderModal').classList.add('open');
+  setTimeout(() => document.getElementById('fName').focus(), 100);
+}
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+document.querySelectorAll('.modal-bg').forEach(bg => {
+  bg.addEventListener('click', e => { if (e.target === bg) bg.classList.remove('open'); });
+});
+
+function showToast(msg) {
+  clearTimeout(toastTimer);
+  document.getElementById('toastMsg').textContent = msg;
+  document.getElementById('toast').classList.add('on');
+  toastTimer = setTimeout(() => document.getElementById('toast').classList.remove('on'), 2400);
+}
+
+function goAdmin() {
+  window.location.href = 'admin.html';
+}
+
+async function doSignOut() {
+  delete window[VAULT_KEY];
+  await sb.auth.signOut();
+  window.location.href = 'login.html';
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-bg.open').forEach(m => m.classList.remove('open'));
+  }
+});
+</script>
+</body>
+</html>

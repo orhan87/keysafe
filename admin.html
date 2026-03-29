@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Gövdağ — Admin</title>
+<link rel="icon" type="image/png" href="favicon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --glass:rgba(255,255,255,0.08);
+  --glass-hov:rgba(255,255,255,0.12);
+  --glass-bd:rgba(255,255,255,0.14);
+  --glass-bd2:rgba(255,255,255,0.22);
+  --glass-inp:rgba(255,255,255,0.06);
+  --t0:#ffffff;--t1:rgba(255,255,255,0.80);
+  --t2:rgba(255,255,255,0.48);--t3:rgba(255,255,255,0.24);
+  --accent:#7eeaad;--accent-d:#3db87a;
+  --accent-g:rgba(126,234,173,0.14);--accent-bd:rgba(126,234,173,0.28);
+  --red:rgba(255,100,100,0.85);--red-g:rgba(255,100,100,0.10);--red-bd:rgba(255,100,100,0.28);
+  --amber:#ffc96b;--amber-g:rgba(255,201,107,0.12);--amber-bd:rgba(255,201,107,0.28);
+  --sans:'Sora',sans-serif;--mono:'JetBrains Mono',monospace;
+  --r:14px;--r2:20px;--r3:28px;
+}
+html,body{min-height:100%;font-family:var(--sans);background:#0a0b12;color:var(--t0);overflow-x:hidden;}
+input,button,select,textarea{font-family:var(--sans);}
+button{cursor:pointer;border:none;background:none;}
+
+.bg{position:fixed;inset:0;z-index:0;overflow:hidden;background:linear-gradient(135deg,#0a0916,#0d1a2e 50%,#0a1218);}
+.orb{position:absolute;border-radius:50%;filter:blur(90px);animation:drift 14s ease-in-out infinite alternate;}
+.o1{width:600px;height:600px;background:radial-gradient(circle,#4a2db5,transparent 70%);top:-200px;left:-150px;opacity:0.40;}
+.o2{width:500px;height:500px;background:radial-gradient(circle,#0e5c9e,transparent 70%);bottom:-150px;right:-100px;opacity:0.35;animation-delay:-5s;}
+.o3{width:300px;height:300px;background:radial-gradient(circle,#1a7a4e,transparent 70%);top:40%;left:55%;opacity:0.25;animation-delay:-9s;}
+.grid{position:absolute;inset:0;opacity:0.03;background-image:linear-gradient(rgba(255,255,255,1) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,1) 1px,transparent 1px);background-size:44px 44px;}
+@keyframes drift{0%{transform:translate(0,0) scale(1);}50%{transform:translate(20px,-15px) scale(1.03);}100%{transform:translate(-10px,18px) scale(0.98);}}
+
+/* ── TOPBAR ── */
+.topbar{
+  position:sticky;top:0;z-index:10;
+  height:56px;padding:0 24px;
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(10,11,18,0.85);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--glass-bd);
+}
+.tb-left{display:flex;align-items:center;gap:14px;}
+.tb-logo{display:flex;align-items:center;gap:8px;}
+.tb-logo-ico{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,rgba(126,234,173,0.25),rgba(61,184,122,0.10));border:1px solid rgba(126,234,173,0.30);display:flex;align-items:center;justify-content:center;}
+.tb-logo-ico img{width:16px;height:16px;object-fit:contain;}
+.tb-logo-name{font-size:15px;font-weight:700;color:var(--t0);letter-spacing:-0.02em;}
+.tb-logo-name em{color:var(--accent);font-style:normal;}
+.tb-badge{font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:3px 10px;border-radius:50px;background:var(--accent-g);border:1px solid var(--accent-bd);color:var(--accent);}
+.tb-right{display:flex;align-items:center;gap:8px;}
+.tb-btn{padding:7px 14px;border-radius:50px;background:var(--glass);border:1px solid var(--glass-bd);font-size:12px;font-weight:600;color:var(--t2);transition:all 0.15s;}
+.tb-btn:hover{background:var(--glass-hov);color:var(--t0);}
+.tb-ico{width:34px;height:34px;border-radius:10px;background:var(--glass);border:1px solid var(--glass-bd);display:flex;align-items:center;justify-content:center;color:var(--t2);transition:all 0.15s;}
+.tb-ico:hover{background:var(--glass-hov);color:var(--t0);}
+
+/* ── SAYFA ── */
+.page{position:relative;z-index:1;max-width:960px;margin:0 auto;padding:28px 24px 60px;}
+
+/* ── BÖLÜM BAŞLIĞI ── */
+.sec-head{margin-bottom:16px;}
+.sec-title{font-size:18px;font-weight:700;color:var(--t0);letter-spacing:-0.01em;}
+.sec-sub{font-size:12px;color:var(--t2);margin-top:3px;}
+
+/* ── STAT KARTLARI ── */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:32px;}
+.stat-card{
+  background:rgba(255,255,255,0.07);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border:1px solid var(--glass-bd2);border-radius:var(--r2);
+  padding:18px 20px;
+}
+.stat-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.stat-ico{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:var(--glass);border:1px solid var(--glass-bd);}
+.stat-badge{font-size:10px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;padding:3px 9px;border-radius:50px;}
+.stat-val{font-size:28px;font-weight:700;font-family:var(--mono);color:var(--t0);margin-bottom:3px;}
+.stat-lbl{font-size:11px;color:var(--t2);}
+
+/* ── PANEL (genel kart) ── */
+.panel{
+  background:rgba(255,255,255,0.07);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border:1px solid var(--glass-bd2);border-radius:var(--r2);
+  margin-bottom:20px;overflow:hidden;
+}
+.panel-head{
+  padding:16px 20px;border-bottom:1px solid var(--glass-bd);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.panel-title{font-size:14px;font-weight:700;color:var(--t0);}
+.panel-sub{font-size:11px;color:var(--t2);margin-top:2px;}
+.panel-body{padding:20px;}
+
+/* ── BÜRO AYARLARI ── */
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.s-field{display:flex;flex-direction:column;gap:6px;}
+.s-label{font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--t2);}
+.s-inp{
+  padding:10px 13px;background:var(--glass-inp);border:1px solid var(--glass-bd);border-radius:var(--r);
+  font-size:13px;color:var(--t0);outline:none;transition:border-color 0.2s;
+}
+.s-inp:focus{border-color:var(--accent-bd);}
+.s-inp::placeholder{color:var(--t3);}
+.s-inp:disabled{opacity:0.5;cursor:not-allowed;}
+
+/* ── ÜYE TABLOSU ── */
+.member-table{width:100%;border-collapse:collapse;}
+.member-table th{font-size:10px;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;color:var(--t3);padding:8px 12px;text-align:left;border-bottom:1px solid var(--glass-bd);}
+.member-table td{padding:12px;border-bottom:1px solid rgba(255,255,255,0.05);vertical-align:middle;}
+.member-table tr:last-child td{border-bottom:none;}
+.member-table tr:hover td{background:rgba(255,255,255,0.03);}
+
+.m-avatar{width:32px;height:32px;border-radius:50%;background:var(--accent-g);border:1px solid var(--accent-bd);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--accent);flex-shrink:0;}
+.m-name{font-size:13px;font-weight:600;color:var(--t0);}
+.m-email{font-size:11px;color:var(--t2);font-family:var(--mono);}
+.role-badge{display:inline-block;font-size:10px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;padding:3px 9px;border-radius:50px;}
+.role-owner{background:var(--accent-g);border:1px solid var(--accent-bd);color:var(--accent);}
+.role-admin{background:rgba(128,200,255,0.12);border:1px solid rgba(128,200,255,0.25);color:#80c8ff;}
+.role-member{background:var(--glass);border:1px solid var(--glass-bd);color:var(--t2);}
+
+.role-select{background:var(--glass-inp);border:1px solid var(--glass-bd);border-radius:8px;padding:5px 9px;font-size:12px;color:var(--t1);outline:none;cursor:pointer;}
+.role-select option{background:#0d1117;}
+
+.del-btn{width:28px;height:28px;border-radius:8px;background:var(--red-g);border:1px solid var(--red-bd);display:flex;align-items:center;justify-content:center;color:var(--red);transition:all 0.15s;opacity:0.6;}
+.del-btn:hover{opacity:1;}
+
+/* ── ABONELIK ── */
+.sub-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.05);}
+.sub-row:last-child{border-bottom:none;padding-bottom:0;}
+.sub-lbl{font-size:12px;color:var(--t2);}
+.sub-val{font-size:13px;font-weight:600;color:var(--t0);font-family:var(--mono);}
+.sub-val.accent{color:var(--accent);}
+.sub-val.amber{color:var(--amber);}
+.sub-val.red{color:var(--red);}
+.trial-bar-bg{height:6px;border-radius:3px;background:rgba(255,255,255,0.07);overflow:hidden;margin-top:8px;}
+.trial-bar{height:100%;border-radius:3px;background:var(--accent);transition:width 0.5s;}
+
+/* ── AUDIT LOG ── */
+.log-table{width:100%;border-collapse:collapse;}
+.log-table th{font-size:10px;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;color:var(--t3);padding:8px 12px;text-align:left;border-bottom:1px solid var(--glass-bd);}
+.log-table td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:12px;color:var(--t1);vertical-align:middle;}
+.log-table tr:last-child td{border-bottom:none;}
+.action-badge{display:inline-block;font-size:9px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;padding:2px 8px;border-radius:50px;}
+.act-view{background:rgba(128,200,255,0.12);color:#80c8ff;border:1px solid rgba(128,200,255,0.22);}
+.act-copy{background:var(--amber-g);color:var(--amber);border:1px solid var(--amber-bd);}
+.act-create{background:var(--accent-g);color:var(--accent);border:1px solid var(--accent-bd);}
+.act-delete{background:var(--red-g);color:var(--red);border:1px solid var(--red-bd);}
+.act-update{background:rgba(196,168,255,0.12);color:#c4a8ff;border:1px solid rgba(196,168,255,0.22);}
+.log-time{font-family:var(--mono);font-size:11px;color:var(--t3);}
+.log-res{font-family:var(--mono);font-size:11px;color:var(--t2);}
+
+/* ── TEHLİKELİ BÖLGE ── */
+.danger-zone{border-color:var(--red-bd);}
+.danger-zone .panel-head{border-bottom-color:var(--red-bd);}
+.danger-title{font-size:14px;font-weight:700;color:var(--red);}
+
+/* ── BUTONLAR ── */
+.btn{padding:10px 20px;border-radius:50px;font-size:12px;font-weight:700;letter-spacing:0.05em;transition:all 0.15s;display:inline-flex;align-items:center;gap:8px;}
+.btn-accent{background:var(--accent-g);border:1px solid var(--accent-bd);color:var(--accent);}
+.btn-accent:hover{background:rgba(126,234,173,0.22);}
+.btn-ghost{background:var(--glass);border:1px solid var(--glass-bd);color:var(--t2);}
+.btn-ghost:hover{background:var(--glass-hov);color:var(--t0);}
+.btn-danger{background:var(--red-g);border:1px solid var(--red-bd);color:var(--red);}
+.btn-danger:hover{background:rgba(255,100,100,0.16);}
+.btn:disabled{opacity:0.45;cursor:not-allowed;}
+
+/* ── MODAL ── */
+.modal-bg{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,0.65);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:20px;}
+.modal-bg.open{display:flex;}
+.modal{width:100%;max-width:440px;background:rgba(12,14,24,0.92);backdrop-filter:blur(40px);border:1px solid var(--glass-bd2);border-radius:var(--r3);padding:28px 30px;box-shadow:0 40px 80px rgba(0,0,0,0.7);animation:modalIn 0.25s cubic-bezier(0.22,1,0.36,1);}
+@keyframes modalIn{from{opacity:0;transform:scale(0.96) translateY(12px)}to{opacity:1;transform:none}}
+.modal-title{font-size:17px;font-weight:700;color:var(--t0);margin-bottom:6px;}
+.modal-sub{font-size:12px;color:var(--t2);line-height:1.6;margin-bottom:22px;}
+.m-field{margin-bottom:14px;}
+.m-label{font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--t2);margin-bottom:6px;display:block;}
+.m-inp{width:100%;padding:10px 13px;background:var(--glass-inp);border:1px solid var(--glass-bd);border-radius:var(--r);font-size:13px;color:var(--t0);outline:none;transition:border-color 0.2s;}
+.m-inp:focus{border-color:var(--accent-bd);}
+.m-inp::placeholder{color:var(--t3);}
+.m-select{width:100%;padding:10px 13px;background:var(--glass-inp);border:1px solid var(--glass-bd);border-radius:var(--r);font-size:13px;color:var(--t0);outline:none;appearance:none;cursor:pointer;}
+.m-select option{background:#0d1117;}
+.m-foot{display:flex;gap:8px;justify-content:flex-end;padding-top:16px;border-top:1px solid var(--glass-bd);}
+
+/* ── ALERT ── */
+.alert{border-radius:10px;padding:10px 14px;font-size:12px;line-height:1.55;margin-bottom:16px;display:none;align-items:flex-start;gap:9px;}
+.alert.err{display:flex;background:rgba(255,100,100,0.10);border:1px solid rgba(255,100,100,0.28);color:var(--red);}
+.alert.ok{display:flex;background:var(--accent-g);border:1px solid var(--accent-bd);color:var(--accent);}
+.alert svg{flex-shrink:0;margin-top:1px;}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(12px);background:rgba(10,12,22,0.90);backdrop-filter:blur(20px);border:1px solid var(--glass-bd2);border-radius:50px;padding:9px 18px;font-size:12px;font-weight:600;color:var(--t1);display:flex;align-items:center;gap:8px;opacity:0;transition:all 0.3s cubic-bezier(0.34,1.5,0.64,1);z-index:200;pointer-events:none;}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);}
+
+.empty-row{padding:24px;text-align:center;font-size:12px;color:var(--t3);}
+</style>
+</head>
+<body>
+
+<div class="bg">
+  <div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div>
+  <div class="grid"></div>
+</div>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="tb-left">
+    <div class="tb-logo">
+      <div class="tb-logo-ico"><img src="favicon.png" alt="g" /></div>
+      <div class="tb-logo-name">gövda<em>ğ</em></div>
+    </div>
+    <div class="tb-badge">Admin</div>
+  </div>
+  <div class="tb-right">
+    <button class="tb-btn" onclick="window.location.href='dashboard.html'">← Kasaya Dön</button>
+    <button class="tb-ico danger" onclick="doSignOut()" title="Çıkış">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- İÇERİK -->
+<div class="page" style="position:relative;z-index:1;">
+
+  <!-- STAT KARTLARI -->
+  <div class="stat-grid" id="statGrid">
+    <div class="stat-card">
+      <div class="stat-card-top">
+        <div class="stat-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7eeaad" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+      </div>
+      <div class="stat-val" id="statMembers">—</div>
+      <div class="stat-lbl">Üye</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-top">
+        <div class="stat-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#80c8ff" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div>
+      </div>
+      <div class="stat-val" id="statFolders">—</div>
+      <div class="stat-lbl">Klasör</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-top">
+        <div class="stat-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c4a8ff" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+      </div>
+      <div class="stat-val" id="statCreds">—</div>
+      <div class="stat-lbl">Kayıt</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-top">
+        <div class="stat-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffc96b" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+        <div class="stat-badge" id="planBadge" style="background:var(--accent-g);border:1px solid var(--accent-bd);color:var(--accent);">—</div>
+      </div>
+      <div class="stat-val" id="statDays">—</div>
+      <div class="stat-lbl" id="statDaysLbl">Kalan gün</div>
+    </div>
+  </div>
+
+  <!-- BÜRO AYARLARI -->
+  <div class="panel" style="margin-bottom:20px;">
+    <div class="panel-head">
+      <div>
+        <div class="panel-title">Büro Ayarları</div>
+        <div class="panel-sub">Büro adı ve bilgilerini güncelleyin</div>
+      </div>
+      <button class="btn btn-accent" id="saveBureauBtn" onclick="saveBureau()">Kaydet</button>
+    </div>
+    <div class="panel-body">
+      <div class="settings-grid">
+        <div class="s-field">
+          <div class="s-label">Büro Adı</div>
+          <input class="s-inp" type="text" id="bureauNameInp" placeholder="Büro adı" />
+        </div>
+        <div class="s-field">
+          <div class="s-label">Büro Adresi</div>
+          <input class="s-inp" type="text" id="bureauSlugInp" disabled />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ÜYELER -->
+  <div class="panel" style="margin-bottom:20px;">
+    <div class="panel-head">
+      <div>
+        <div class="panel-title">Üyeler</div>
+        <div class="panel-sub" id="memberSubLbl">—</div>
+      </div>
+      <button class="btn btn-accent" onclick="openInviteModal()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Üye Davet Et
+      </button>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="member-table">
+        <thead>
+          <tr>
+            <th style="width:40px;"></th>
+            <th>Üye</th>
+            <th>Rol</th>
+            <th>Katılım</th>
+            <th style="width:80px;"></th>
+          </tr>
+        </thead>
+        <tbody id="memberTableBody">
+          <tr><td colspan="5" class="empty-row">Yükleniyor…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ABONELİK -->
+  <div class="panel" style="margin-bottom:20px;">
+    <div class="panel-head">
+      <div>
+        <div class="panel-title">Abonelik</div>
+        <div class="panel-sub">Plan ve ödeme bilgileri</div>
+      </div>
+      <button class="btn btn-ghost" onclick="openIbanModal()">Ödeme Bilgisi</button>
+    </div>
+    <div class="panel-body" id="subBody">
+      <div style="font-size:12px;color:var(--t3);">Yükleniyor…</div>
+    </div>
+  </div>
+
+  <!-- AUDİT LOG -->
+  <div class="panel" style="margin-bottom:20px;">
+    <div class="panel-head">
+      <div>
+        <div class="panel-title">İşlem Günlüğü</div>
+        <div class="panel-sub">Son 50 işlem</div>
+      </div>
+      <button class="btn btn-ghost" onclick="loadAuditLogs()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        Yenile
+      </button>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="log-table">
+        <thead>
+          <tr>
+            <th>İşlem</th>
+            <th>Kayıt</th>
+            <th>Kullanıcı</th>
+            <th>Zaman</th>
+          </tr>
+        </thead>
+        <tbody id="logTableBody">
+          <tr><td colspan="4" class="empty-row">Yükleniyor…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TEHLİKELİ BÖLGE -->
+  <div class="panel danger-zone">
+    <div class="panel-head">
+      <div><div class="danger-title">Tehlikeli Bölge</div><div class="panel-sub">Bu işlemler geri alınamaz</div></div>
+    </div>
+    <div class="panel-body" style="display:flex;gap:12px;flex-wrap:wrap;">
+      <button class="btn btn-danger" onclick="confirmDeleteBureau()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+        Büroyu Sil
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<!-- DAVET MODAL -->
+<div class="modal-bg" id="inviteModal">
+  <div class="modal">
+    <div class="modal-title">Üye Davet Et</div>
+    <div class="modal-sub">Davet e-postası gönderilecek. Davetli, hesap oluştururken büronuza otomatik eklenecek.</div>
+    <div class="alert" id="inviteAlert">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span id="inviteAlertMsg"></span>
+    </div>
+    <div class="m-field"><label class="m-label">E-posta Adresi</label><input class="m-inp" type="email" id="inviteEmail" placeholder="ornek@sirket.com" /></div>
+    <div class="m-field">
+      <label class="m-label">Rol</label>
+      <select class="m-select" id="inviteRole">
+        <option value="member">Üye — görüntüleyebilir, ekleyebilir</option>
+        <option value="admin">Admin — üye yönetebilir</option>
+      </select>
+    </div>
+    <div class="m-foot">
+      <button class="btn btn-ghost" onclick="closeModal('inviteModal')">İptal</button>
+      <button class="btn btn-accent" onclick="sendInvite()">Daveti Gönder</button>
+    </div>
+  </div>
+</div>
+
+<!-- SİL ONAY MODAL -->
+<div class="modal-bg" id="deleteModal">
+  <div class="modal">
+    <div class="modal-title" style="color:var(--red);">Büroyu Sil</div>
+    <div class="modal-sub">Bu işlem <strong>geri alınamaz</strong>. Tüm klasörler, kayıtlar ve üyeler silinecek. Onaylamak için büro adını yazın.</div>
+    <div class="m-field"><input class="m-inp" type="text" id="deletConfirmInp" placeholder="Büro adını yazın…" /></div>
+    <div class="m-foot">
+      <button class="btn btn-ghost" onclick="closeModal('deleteModal')">İptal</button>
+      <button class="btn btn-danger" id="deleteBureauBtn" onclick="deleteBureau()" disabled>Kalıcı Olarak Sil</button>
+    </div>
+  </div>
+</div>
+
+<!-- IBAN MODAL -->
+<div class="modal-bg" id="ibanModal">
+  <div class="modal">
+    <div class="modal-title">Ödeme Bilgileri</div>
+    <div class="modal-sub">Yıllık abonelik için aşağıdaki IBAN'a havale/EFT yapın. Açıklamaya büro adınızı ve e-posta adresinizi yazın.</div>
+
+    <div style="background:var(--accent-g);border:1px solid var(--accent-bd);border-radius:var(--r);padding:16px 18px;margin-bottom:16px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;color:var(--t2);margin-bottom:8px;">Alıcı</div>
+      <div style="font-size:11px;color:var(--t2);margin-bottom:2px;">T.C. Ziraat Bankası A.Ş.</div>
+      <div style="font-size:14px;font-weight:600;color:var(--t0);margin-bottom:12px;">GÖVDAĞ GIDA TİCARET LİMİTED ŞİRKETİ</div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;color:var(--t2);margin-bottom:6px;">IBAN</div>
+      <div style="font-family:var(--mono);font-size:14px;color:var(--accent);letter-spacing:0.08em;cursor:pointer;" onclick="copyIban(this)">TR95 0001 0020 7597 8021 5850 01</div>
+      <div style="font-size:11px;color:var(--t3);margin-top:4px;">Tıklayarak kopyalayın</div>
+    </div>
+
+    <div style="background:var(--glass-inp);border:1px solid var(--glass-bd);border-radius:var(--r);padding:14px 16px;margin-bottom:20px;">
+      <div style="font-size:11px;color:var(--t2);line-height:1.7;">
+        <div style="margin-bottom:6px;"><span style="color:var(--t3);">Plan:</span> <strong style="color:var(--t0);">Starter — ₺290/yıl &nbsp;|&nbsp; Pro — ₺590/yıl</strong></div>
+        <div style="margin-bottom:6px;"><span style="color:var(--t3);">Açıklama:</span> <strong style="color:var(--t0);" id="ibanDesc">—</strong></div>
+        <div><span style="color:var(--t3);">Ödeme sonrası:</span> <span style="color:var(--t0);">1 iş günü içinde hesabınız aktive edilir</span></div>
+      </div>
+    </div>
+
+    <div style="font-size:11px;color:var(--t3);margin-bottom:20px;">Sorularınız için: <span style="color:var(--accent);"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="6206071116070922050d140603054c010d0f">[email&#160;protected]</a></span></div>
+
+    <div class="m-foot" style="padding-top:0;border-top:none;">
+      <button class="btn btn-ghost" onclick="closeModal('ibanModal')">Kapat</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><div class="toast-dot"></div><span id="toastMsg"></span></div>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+const SUPABASE_URL  = 'https://waqnacujnbnwxnmsjzxq.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndhcW5hY3VqbmJud3hubXNqenhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MjY5NjMsImV4cCI6MjA5MDMwMjk2M30.QWjJjcOxcvlwnMYiY_y87Juap9W9tIVY3VPLJB7zryM';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+let currentUser = null;
+let bureauId    = null;
+let bureauData  = null;
+let myRole      = null;
+let members     = [];
+let toastTimer;
+
+// ════════════════════════════════════════════════════════════
+// BAŞLANGIÇ
+// ════════════════════════════════════════════════════════════
+(async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { window.location.href = 'login.html'; return; }
+  currentUser = session.user;
+
+  const { data: member } = await sb
+    .from('bureau_members')
+    .select('bureau_id, role')
+    .eq('user_id', currentUser.id)
+    .single();
+
+  if (!member) { window.location.href = 'onboarding.html'; return; }
+
+  bureauId = member.bureau_id;
+  myRole   = member.role;
+
+  if (!['owner','admin'].includes(myRole)) {
+    showToast('Bu sayfaya erişim yetkiniz yok');
+    setTimeout(() => window.location.href = 'dashboard.html', 2000);
+    return;
+  }
+
+  await Promise.all([
+    loadBureau(),
+    loadMembers(),
+    loadSubscription(),
+    loadStats(),
+    loadAuditLogs(),
+  ]);
+})();
+
+// ════════════════════════════════════════════════════════════
+// BÜRO
+// ════════════════════════════════════════════════════════════
+async function loadBureau() {
+  const { data } = await sb.from('bureaus').select('*').eq('id', bureauId).single();
+  if (!data) return;
+  bureauData = data;
+  document.getElementById('bureauNameInp').value = data.name;
+  document.getElementById('bureauSlugInp').value = data.slug;
+  document.getElementById('deletConfirmInp').setAttribute('data-bureau-name', data.name);
+}
+
+async function saveBureau() {
+  const name = document.getElementById('bureauNameInp').value.trim();
+  if (!name) { showToast('Büro adı boş olamaz'); return; }
+  const btn = document.getElementById('saveBureauBtn');
+  btn.disabled = true; btn.textContent = 'Kaydediliyor…';
+  const { error } = await sb.from('bureaus').update({ name }).eq('id', bureauId);
+  btn.disabled = false; btn.textContent = 'Kaydet';
+  if (error) { showToast('Hata: ' + error.message); return; }
+  bureauData.name = name;
+  showToast('Büro adı güncellendi');
+}
+
+// ════════════════════════════════════════════════════════════
+// STATS
+// ════════════════════════════════════════════════════════════
+async function loadStats() {
+  const [{ count: mCount }, { count: fCount }, { count: cCount }] = await Promise.all([
+    sb.from('bureau_members').select('*', {count:'exact',head:true}).eq('bureau_id', bureauId),
+    sb.from('folders').select('*', {count:'exact',head:true}).eq('bureau_id', bureauId),
+    sb.from('credentials').select('*', {count:'exact',head:true}).eq('bureau_id', bureauId),
+  ]);
+  document.getElementById('statMembers').textContent = mCount ?? '—';
+  document.getElementById('statFolders').textContent = fCount ?? '—';
+  document.getElementById('statCreds').textContent   = cCount ?? '—';
+}
+
+// ════════════════════════════════════════════════════════════
+// ÜYELER
+// ════════════════════════════════════════════════════════════
+async function loadMembers() {
+  const { data, error } = await sb
+    .from('bureau_members')
+    .select('id, user_id, role, joined_at')
+    .eq('bureau_id', bureauId)
+    .order('joined_at');
+
+  if (error) { document.getElementById('memberTableBody').innerHTML = `<tr><td colspan="5" class="empty-row">Yüklenemedi</td></tr>`; return; }
+  members = data || [];
+  document.getElementById('memberSubLbl').textContent = `${members.length} üye`;
+  renderMembers();
+}
+
+function renderMembers() {
+  const tbody = document.getElementById('memberTableBody');
+  if (!members.length) {
+    tbody.innerHTML = `<tr><td colspan="5" class="empty-row">Henüz üye yok</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = members.map(m => {
+    const email   = m.email || m.user_id.substring(0,8) + '…';
+    const initial = (m.email?.[0] || '?').toUpperCase();
+    const date    = new Date(m.joined_at).toLocaleDateString('tr-TR');
+    const isMe    = m.user_id === currentUser.id;
+    const roleClass = m.role === 'owner' ? 'role-owner' : m.role === 'admin' ? 'role-admin' : 'role-member';
+    const roleTr   = m.role === 'owner' ? 'Owner' : m.role === 'admin' ? 'Admin' : 'Üye';
+
+    return `<tr>
+      <td><div class="m-avatar">${initial}</div></td>
+      <td>
+        <div class="m-name">${email}${isMe ? ' <span style="font-size:10px;color:var(--t3)">(siz)</span>' : ''}</div>
+        <div class="m-email">${m.user_id.substring(0,8)}…</div>
+      </td>
+      <td>
+        ${isMe || m.role === 'owner' ? `<span class="role-badge ${roleClass}">${roleTr}</span>` :
+          `<select class="role-select" onchange="changeRole('${m.id}',this.value)">
+            <option value="member" ${m.role==='member'?'selected':''}>Üye</option>
+            <option value="admin"  ${m.role==='admin' ?'selected':''}>Admin</option>
+          </select>`}
+      </td>
+      <td style="font-size:11px;color:var(--t2);font-family:var(--mono);">${date}</td>
+      <td>
+        ${!isMe && m.role !== 'owner' ?
+          `<button class="del-btn" onclick="removeMember('${m.id}','${m.user_id}')" title="Üyeyi çıkar">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>` : ''}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function changeRole(memberId, newRole) {
+  const { error } = await sb.from('bureau_members').update({ role: newRole }).eq('id', memberId);
+  if (error) { showToast('Rol güncellenemedi'); await loadMembers(); return; }
+  showToast('Rol güncellendi');
+  await loadMembers();
+}
+
+async function removeMember(memberId, userId) {
+  if (!confirm('Bu üyeyi bürodan çıkarmak istiyor musunuz?')) return;
+  const { error } = await sb.from('bureau_members').delete().eq('id', memberId);
+  if (error) { showToast('Üye çıkarılamadı: ' + error.message); return; }
+  showToast('Üye bürodan çıkarıldı');
+  await loadMembers();
+  await loadStats();
+}
+
+// ════════════════════════════════════════════════════════════
+// DAVET
+// ════════════════════════════════════════════════════════════
+function openInviteModal() {
+  document.getElementById('inviteEmail').value = '';
+  document.getElementById('inviteAlert').className = 'alert';
+  document.getElementById('inviteModal').classList.add('open');
+  setTimeout(() => document.getElementById('inviteEmail').focus(), 100);
+}
+
+async function sendInvite() {
+  const email = document.getElementById('inviteEmail').value.trim();
+  const role  = document.getElementById('inviteRole').value;
+  if (!email) { showInviteAlert('E-posta adresi boş olamaz'); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showInviteAlert('Geçerli bir e-posta girin'); return; }
+
+  const btn = document.querySelector('#inviteModal .btn-accent');
+  btn.disabled = true; btn.textContent = 'Gönderiliyor…';
+
+  try {
+    const { data: sessionData } = await sb.auth.getSession();
+    const token = sessionData?.session?.access_token;
+    if (!token) { showInviteAlert('Oturum bulunamadı, lütfen tekrar giriş yapın'); return; }
+
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/invite-user`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'apikey': SUPABASE_ANON,
+      },
+      body: JSON.stringify({ bureau_id: bureauId, email, role }),
+    });
+
+    const result = await res.json();
+
+    if (!result.success) {
+      showInviteAlert(result.message || 'Davet gönderilemedi');
+      return;
+    }
+
+    const msg = result.type === 'added'
+      ? `${email} büroya eklendi (mevcut kullanıcı)`
+      : `${email} adresine davet e-postası gönderildi`;
+
+    showInviteAlert(msg, 'ok');
+    showToast(msg);
+    await loadMembers();
+    await loadStats();
+
+  } catch (err) {
+    showInviteAlert('Hata: ' + (err.message || 'Bilinmeyen hata'));
+  } finally {
+    btn.disabled = false; btn.textContent = 'Daveti Gönder';
+  }
+}
+
+function showInviteAlert(msg, type='err') {
+  const el  = document.getElementById('inviteAlert');
+  el.className = 'alert ' + type;
+  document.getElementById('inviteAlertMsg').textContent = msg;
+}
+
+// ════════════════════════════════════════════════════════════
+// ABONELİK
+// ════════════════════════════════════════════════════════════
+async function loadSubscription() {
+  const { data: bureau } = await sb.from('bureaus').select('plan, trial_ends_at').eq('id', bureauId).single();
+  const { data: sub }    = await sb.from('subscriptions').select('*').eq('bureau_id', bureauId).single();
+
+  const body = document.getElementById('subBody');
+
+  if (bureau?.plan === 'trial') {
+    const trialEnd  = bureau.trial_ends_at ? new Date(bureau.trial_ends_at) : null;
+    const now       = new Date();
+    const daysLeft  = trialEnd ? Math.max(0, Math.ceil((trialEnd - now) / 86400000)) : 0;
+    const totalDays = 14;
+    const pct       = Math.max(0, Math.min(100, (daysLeft / totalDays) * 100));
+    const color     = daysLeft > 7 ? 'var(--accent)' : daysLeft > 3 ? 'var(--amber)' : 'var(--red)';
+
+    document.getElementById('planBadge').textContent = 'Deneme';
+    document.getElementById('statDays').textContent  = daysLeft;
+    document.getElementById('statDays').style.color  = color;
+
+    body.innerHTML = `
+      <div class="sub-row"><span class="sub-lbl">Plan</span><span class="sub-val">Ücretsiz Deneme</span></div>
+      <div class="sub-row"><span class="sub-lbl">Bitiş tarihi</span><span class="sub-val amber">${trialEnd?.toLocaleDateString('tr-TR') || '—'}</span></div>
+      <div class="sub-row">
+        <span class="sub-lbl">Kalan süre</span>
+        <span class="sub-val" style="color:${color}">${daysLeft} gün</span>
+      </div>
+      <div class="trial-bar-bg"><div class="trial-bar" style="width:${pct}%;background:${color};"></div></div>
+      <div style="margin-top:16px;">
+        <button class="btn btn-accent" onclick="openIbanModal()">
+          Abonelik Başlat →
+        </button>
+      </div>`;
+  } else if (sub) {
+    const end   = sub.current_period_end ? new Date(sub.current_period_end) : null;
+    const stMap = {active:'Aktif',trialing:'Deneme',past_due:'Gecikmiş',cancelled:'İptal',incomplete:'Tamamlanmamış'};
+    document.getElementById('planBadge').textContent = 'Pro';
+    document.getElementById('statDays').textContent  = end ? Math.max(0, Math.ceil((end - new Date()) / 86400000)) : '—';
+    body.innerHTML = `
+      <div class="sub-row"><span class="sub-lbl">Plan</span><span class="sub-val accent">Pro — ₺590/yıl</span></div>
+      <div class="sub-row"><span class="sub-lbl">Durum</span><span class="sub-val">${stMap[sub.status]||sub.status}</span></div>
+      <div class="sub-row"><span class="sub-lbl">Yenileme tarihi</span><span class="sub-val">${end?.toLocaleDateString('tr-TR')||'—'}</span></div>`;
+  } else {
+    body.innerHTML = `<div style="font-size:12px;color:var(--t3);">Abonelik bilgisi bulunamadı.</div>`;
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// AUDİT LOG
+// ════════════════════════════════════════════════════════════
+async function loadAuditLogs() {
+  const { data, error } = await sb
+    .from('audit_logs')
+    .select('*')
+    .eq('bureau_id', bureauId)
+    .order('created_at', { ascending: false })
+    .limit(50);
+
+  const tbody = document.getElementById('logTableBody');
+  if (error || !data?.length) {
+    tbody.innerHTML = `<tr><td colspan="4" class="empty-row">Henüz işlem yok</td></tr>`;
+    return;
+  }
+
+  const actMap = {view:'act-view',copy:'act-copy',create:'act-create',delete:'act-delete',update:'act-update'};
+  const actTr  = {view:'Görüntüledi',copy:'Kopyaladı',create:'Oluşturdu',delete:'Sildi',update:'Güncelledi'};
+
+  tbody.innerHTML = data.map(log => {
+    const dt   = new Date(log.created_at);
+    const time = dt.toLocaleDateString('tr-TR') + ' ' + dt.toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});
+    const cls  = actMap[log.action] || 'act-view';
+    const uid  = log.user_id?.substring(0,8) || '—';
+    return `<tr>
+      <td><span class="action-badge ${cls}">${actTr[log.action]||log.action}</span></td>
+      <td><span class="log-res">${log.resource_name || log.resource_type || '—'}</span></td>
+      <td><span class="log-res">${uid}…</span></td>
+      <td><span class="log-time">${time}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════════════════════════
+// BÜRO SİL
+// ════════════════════════════════════════════════════════════
+function confirmDeleteBureau() {
+  const inp = document.getElementById('deletConfirmInp');
+  inp.value = '';
+  inp.oninput = () => {
+    document.getElementById('deleteBureauBtn').disabled = inp.value !== bureauData?.name;
+  };
+  document.getElementById('deleteModal').classList.add('open');
+}
+
+async function deleteBureau() {
+  const confirmed = document.getElementById('deletConfirmInp').value === bureauData?.name;
+  if (!confirmed) return;
+  const btn = document.getElementById('deleteBureauBtn');
+  btn.disabled = true; btn.textContent = 'Siliniyor…';
+  const { error } = await sb.from('bureaus').delete().eq('id', bureauId);
+  if (error) { showToast('Silinemedi: ' + error.message); btn.disabled=false; btn.textContent='Kalıcı Olarak Sil'; return; }
+  await sb.auth.signOut();
+  window.location.href = 'login.html';
+}
+
+// ════════════════════════════════════════════════════════════
+// YARDIMCI
+// ════════════════════════════════════════════════════════════
+function openIbanModal() {
+  const bureauName = bureauData?.name || '—';
+  const email = currentUser?.email || '—';
+  document.getElementById('ibanDesc').textContent = bureauName + ' / ' + email;
+  document.getElementById('ibanModal').classList.add('open');
+}
+
+function copyIban(el) {
+  navigator.clipboard.writeText('TR95 0001 0020 7597 8021 5850 01').then(() => {
+    el.textContent = '✓ Kopyalandı';
+    el.style.color = 'var(--accent)';
+    setTimeout(() => {
+      el.textContent = 'TR00 0000 0000 0000 0000 0000 00';
+    }, 2000);
+  });
+  showToast('IBAN kopyalandı');
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-bg').forEach(bg => {
+  bg.addEventListener('click', e => { if (e.target===bg) bg.classList.remove('open'); });
+});
+function showToast(msg) {
+  clearTimeout(toastTimer);
+  document.getElementById('toastMsg').textContent = msg;
+  document.getElementById('toast').classList.add('on');
+  toastTimer = setTimeout(() => document.getElementById('toast').classList.remove('on'), 2400);
+}
+async function doSignOut() {
+  await sb.auth.signOu

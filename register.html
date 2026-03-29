@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Gövdağ — Kayıt Ol</title>
+<link rel="icon" type="image/png" href="favicon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --glass-bd:rgba(255,255,255,0.18);--glass-bd2:rgba(255,255,255,0.28);
+  --glass-inp:rgba(255,255,255,0.06);
+  --t0:#ffffff;--t1:rgba(255,255,255,0.78);--t2:rgba(255,255,255,0.48);--t3:rgba(255,255,255,0.26);
+  --accent:#7eeaad;--accent-d:#3db87a;--accent-g:rgba(126,234,173,0.14);--accent-bd:rgba(126,234,173,0.28);
+  --err:rgba(255,100,100,0.85);--err-bg:rgba(255,100,100,0.10);--err-bd:rgba(255,100,100,0.30);
+  --sans:'Sora',sans-serif;--mono:'JetBrains Mono',monospace;--r:16px;--r2:24px;
+}
+html,body{min-height:100%;font-family:var(--sans);background:#0a0b12;color:var(--t0);overflow-x:hidden;}
+input,button{font-family:var(--sans);}button{cursor:pointer;border:none;background:none;}
+
+.bg{position:fixed;inset:0;z-index:0;overflow:hidden;background:linear-gradient(135deg,#0a0916,#0d1a2e 50%,#0a1218);}
+.orb{position:absolute;border-radius:50%;filter:blur(90px);animation:drift 14s ease-in-out infinite alternate;}
+.o1{width:600px;height:600px;background:radial-gradient(circle,#4a2db5,transparent 70%);top:-200px;left:-150px;opacity:0.5;}
+.o2{width:500px;height:500px;background:radial-gradient(circle,#0e5c9e,transparent 70%);bottom:-150px;right:-100px;opacity:0.45;animation-delay:-5s;}
+.o3{width:350px;height:350px;background:radial-gradient(circle,#1a7a4e,transparent 70%);top:40%;left:55%;opacity:0.35;animation-delay:-8s;}
+.grid{position:absolute;inset:0;opacity:0.035;background-image:linear-gradient(rgba(255,255,255,1) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,1) 1px,transparent 1px);background-size:44px 44px;}
+@keyframes drift{0%{transform:translate(0,0) scale(1);}50%{transform:translate(20px,-15px) scale(1.03);}100%{transform:translate(-10px,18px) scale(0.98);}}
+
+.page{position:relative;z-index:1;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:32px 20px 56px;}
+
+.card{width:100%;max-width:420px;background:rgba(255,255,255,0.08);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border:1px solid var(--glass-bd2);border-radius:var(--r2);padding:40px 38px 36px;box-shadow:0 32px 80px rgba(0,0,0,0.55),inset 0 1px 0 rgba(255,255,255,0.22);animation:cardIn 0.65s cubic-bezier(0.22,1,0.36,1) both;}
+@keyframes cardIn{from{opacity:0;transform:translateY(28px) scale(0.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+
+.logo-wrap{display:flex;flex-direction:column;align-items:center;margin-bottom:28px;}
+.logo-img-box{width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,rgba(126,234,173,0.22),rgba(61,184,122,0.10));border:1px solid rgba(126,234,173,0.32);display:flex;align-items:center;justify-content:center;margin-bottom:12px;box-shadow:0 8px 28px rgba(126,234,173,0.18);}
+.logo-img-box img{width:32px;height:32px;object-fit:contain;}
+.logo-name{font-size:24px;font-weight:700;color:var(--t0);letter-spacing:-0.03em;}
+.logo-name em{color:var(--accent);font-style:normal;}
+
+/* Davet bilgi kutusu */
+.invite-box{background:var(--accent-g);border:1px solid var(--accent-bd);border-radius:12px;padding:14px 16px;margin-bottom:22px;display:flex;gap:10px;align-items:flex-start;}
+.invite-box-txt{font-size:12px;color:rgba(126,234,173,0.85);line-height:1.6;}
+.invite-box-txt strong{color:var(--accent);}
+
+.field{margin-bottom:14px;}
+.label{font-size:11px;font-weight:600;letter-spacing:0.09em;text-transform:uppercase;color:var(--t2);margin-bottom:7px;display:block;}
+.inp-wrap{position:relative;}
+.inp{width:100%;padding:12px 44px 12px 14px;background:var(--glass-inp);border:1px solid var(--glass-bd);border-radius:var(--r);font-family:var(--sans);font-size:14px;color:var(--t0);outline:none;transition:border-color 0.2s,box-shadow 0.2s;}
+.inp::placeholder{color:var(--t3);}
+.inp:focus{border-color:rgba(126,234,173,0.45);box-shadow:0 0 0 3px rgba(126,234,173,0.08);}
+.inp:disabled{opacity:0.6;cursor:not-allowed;}
+.inp-ico{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--t3);padding:4px;transition:color 0.15s;}
+.inp-ico:hover{color:var(--t1);}
+.inp-ico.btn-style{cursor:pointer;background:none;border:none;}
+
+.pw-strength{height:3px;border-radius:2px;background:rgba(255,255,255,0.08);margin-top:6px;overflow:hidden;}
+.pw-strength-bar{height:100%;border-radius:2px;width:0%;transition:width 0.3s,background 0.3s;}
+
+.alert{border-radius:10px;padding:11px 14px;font-size:12px;line-height:1.55;margin-bottom:16px;display:none;align-items:flex-start;gap:9px;}
+.alert.err{display:flex;background:var(--err-bg);border:1px solid var(--err-bd);color:var(--err);}
+.alert.ok{display:flex;background:var(--accent-g);border:1px solid var(--accent-bd);color:var(--accent);}
+.alert svg{flex-shrink:0;margin-top:1px;}
+
+.btn{width:100%;padding:13px;margin-top:4px;background:linear-gradient(135deg,rgba(126,234,173,0.22),rgba(61,184,122,0.12));border:1px solid rgba(126,234,173,0.38);border-radius:var(--r);font-family:var(--sans);font-size:13px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--accent);cursor:pointer;transition:all 0.2s;box-shadow:0 4px 20px rgba(126,234,173,0.12);display:flex;align-items:center;justify-content:center;gap:10px;}
+.btn:hover{background:linear-gradient(135deg,rgba(126,234,173,0.30),rgba(61,184,122,0.18));}
+.btn:active{transform:scale(0.99);}
+.btn:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
+.btn-spin{width:16px;height:16px;border:2px solid rgba(126,234,173,0.3);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;display:none;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.login-link{text-align:center;margin-top:16px;font-size:12px;color:var(--t2);}
+.login-link a{color:var(--accent);text-decoration:none;cursor:pointer;}
+.login-link a:hover{text-decoration:underline;}
+
+.sec-note{margin-top:20px;padding:11px 13px;background:rgba(126,234,173,0.05);border:1px solid rgba(126,234,173,0.12);border-radius:10px;display:flex;gap:10px;align-items:flex-start;}
+.sec-note-txt{font-size:11px;color:rgba(126,234,173,0.55);line-height:1.6;}
+</style>
+</head>
+<body>
+
+<div class="bg">
+  <div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div>
+  <div class="grid"></div>
+</div>
+
+<div class="page">
+  <div class="card">
+
+    <div class="logo-wrap">
+      <div class="logo-img-box"><img src="favicon.png" alt="Gövdağ" /></div>
+      <div class="logo-name">gövda<em>ğ</em></div>
+    </div>
+
+    <!-- Davet bilgi kutusu — sadece token varsa gösterilir -->
+    <div class="invite-box" id="inviteBox" style="display:none;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(126,234,173,0.8)" stroke-width="2" style="flex-shrink:0;margin-top:1px"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9a16 16 0 0 0 6.91 6.91l.85-.85a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+      <div class="invite-box-txt" id="inviteBoxTxt">Davet bağlantısıyla geldiniz.</div>
+    </div>
+
+    <div class="alert" id="alert">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span id="alertMsg"></span>
+    </div>
+
+    <div class="field">
+      <label class="label">Ad Soyad</label>
+      <div class="inp-wrap">
+        <input class="inp" type="text" id="regName" placeholder="Ahmet Yılmaz" autocomplete="name" />
+        <svg class="inp-ico" style="pointer-events:none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </div>
+    </div>
+
+    <div class="field" id="bureauField">
+      <label class="label">Büro / Şirket Adı</label>
+      <div class="inp-wrap">
+        <input class="inp" type="text" id="regBureau" placeholder="Yılmaz Hukuk Bürosu" />
+        <svg class="inp-ico" style="pointer-events:none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="label">E-posta</label>
+      <div class="inp-wrap">
+        <input class="inp" type="email" id="regEmail" placeholder="ornek@sirket.com" autocomplete="email" />
+        <svg class="inp-ico" style="pointer-events:none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="label">Şifre</label>
+      <div class="inp-wrap">
+        <input class="inp" type="password" id="regPw" placeholder="En az 8 karakter" autocomplete="new-password" oninput="checkStrength(this.value)" />
+        <button class="inp-ico btn-style" onclick="togglePw('regPw',this)" type="button">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+      <div class="pw-strength"><div class="pw-strength-bar" id="pwBar"></div></div>
+    </div>
+
+    <button class="btn" id="btnReg" onclick="doRegister()">
+      <span id="btnRegTxt">Hesap Oluştur</span>
+      <div class="btn-spin" id="btnRegSpin"></div>
+    </button>
+
+    <div class="login-link">Zaten hesabınız var mı? <a onclick="window.location.href='login.html'">Giriş yapın</a></div>
+
+    <div class="sec-note">
+      <svg viewBox="0 0 24 24" fill="none" stroke="rgba(126,234,173,0.6)" stroke-width="1.8" width="14" height="14" style="flex-shrink:0;margin-top:1px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      <div class="sec-note-txt">Parolalar AES-256-GCM ile şifrelenir. Master şifre sunucuya gönderilmez.</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL  = 'https://waqnacujnbnwxnmsjzxq.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndhcW5hY3VqbmJud3hubXNqenhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MjY5NjMsImV4cCI6MjA5MDMwMjk2M30.QWjJjcOxcvlwnMYiY_y87Juap9W9tIVY3VPLJB7zryM';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+// URL'den token ve email al
+const params     = new URLSearchParams(window.location.search);
+const inviteToken = params.get('token');
+const inviteEmail = params.get('email');
+let   inviteData  = null; // token doğrulandıktan sonra dolu olur
+
+// ── TOKEN VARSA DOĞRULA ───────────────────────────────────────
+(async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) { window.location.href = 'dashboard.html'; return; }
+
+  if (!inviteToken) return; // Normal kayıt akışı
+
+  // Token'ı doğrula
+  const { data: invite, error } = await sb
+    .from('invite_tokens')
+    .select('id, bureau_id, email, role, expires_at, used, bureaus(name)')
+    .eq('token', inviteToken)
+    .single();
+
+  if (error || !invite) {
+    showAlert('Davet bağlantısı geçersiz veya süresi dolmuş.'); return;
+  }
+  if (invite.used) {
+    showAlert('Bu davet daha önce kullanılmış.'); return;
+  }
+  if (new Date(invite.expires_at) < new Date()) {
+    showAlert('Bu davet bağlantısının süresi dolmuş. Yöneticinizden yeni davet isteyin.'); return;
+  }
+
+  inviteData = invite;
+
+  // UI güncelle
+  const bureauName = invite.bureaus?.name || 'Büro';
+  const roleTr     = invite.role === 'admin' ? 'Admin' : 'Üye';
+  document.getElementById('inviteBox').style.display = 'flex';
+  document.getElementById('inviteBoxTxt').innerHTML =
+    `<strong>${bureauName}</strong> bürosuna <strong>${roleTr}</strong> olarak davet edildiniz.`;
+
+  // E-posta alanını doldur ve kilitle
+  if (invite.email) {
+    document.getElementById('regEmail').value    = invite.email;
+    document.getElementById('regEmail').disabled = true;
+  }
+
+  // Büro alanını gizle — zaten bir büroya katılıyor
+  document.getElementById('bureauField').style.display = 'none';
+})();
+
+// ── KAYIT ────────────────────────────────────────────────────
+async function doRegister() {
+  clearAlert();
+  const name   = document.getElementById('regName').value.trim();
+  const bureau = document.getElementById('regBureau').value.trim();
+  const email  = document.getElementById('regEmail').value.trim();
+  const pw     = document.getElementById('regPw').value;
+
+  if (!name)  { showAlert('Ad soyad boş bırakılamaz'); return; }
+  if (!email) { showAlert('E-posta boş bırakılamaz'); return; }
+  if (!pw || pw.length < 8) { showAlert('Şifre en az 8 karakter olmalı'); return; }
+  if (!inviteData && !bureau) { showAlert('Büro adı boş bırakılamaz'); return; }
+
+  setLoading(true);
+
+  try {
+    // 1. Supabase Auth kaydı
+    const { data: authData, error: authErr } = await sb.auth.signUp({
+      email,
+      password: pw,
+      options: { data: { full_name: name, bureau_name: inviteData ? inviteData.bureaus?.name : bureau } }
+    });
+
+    if (authErr) {
+      const msgs = {
+        'User already registered': 'Bu e-posta ile zaten bir hesap var. Giriş yapmayı deneyin.',
+        'Password should be at least 6 characters': 'Şifre çok kısa.',
+      };
+      showAlert(msgs[authErr.message] || authErr.message);
+      return;
+    }
+
+    if (inviteData) {
+      // ── DAVETLİ KAYIT ─────────────────────────────────────
+      // Token'ı kullanıldı olarak işaretle
+      await sb.from('invite_tokens').update({ used: true }).eq('id', inviteData.id);
+
+      // Bureau member kaydı — e-posta doğrulandıktan sonra tetiklenecek
+      // (auth trigger veya sonraki girişte kontrol edilecek)
+      sessionStorage.setItem('pending_invite_bureau_id', inviteData.bureau_id);
+      sessionStorage.setItem('pending_invite_role', inviteData.role);
+
+      showAlert(
+        `Hesabınız oluşturuldu! ${email} adresine doğrulama e-postası gönderdik. E-postanızı doğruladıktan sonra giriş yapabilirsiniz.`,
+        'ok'
+      );
+    } else {
+      // ── NORMAL KAYIT ──────────────────────────────────────
+      sessionStorage.setItem('pending_bureau', bureau);
+      sessionStorage.setItem('pending_name', name);
+
+      showAlert(
+        `Hesabınız oluşturuldu! ${email} adresine doğrulama e-postası gönderdik.`,
+        'ok'
+      );
+      setTimeout(() => window.location.href = 'onboarding.html', 2000);
+    }
+
+  } catch (err) {
+    showAlert('Hata: ' + (err.message || 'Bilinmeyen hata'));
+  } finally {
+    setLoading(false);
+  }
+}
+
+// ── YARDIMCI ─────────────────────────────────────────────────
+function showAlert(msg, type='err') {
+  const el = document.getElementById('alert');
+  el.className = 'alert ' + type;
+  document.getElementById('alertMsg').textContent = msg;
+}
+function clearAlert() { document.getElementById('alert').className = 'alert'; }
+
+function setLoading(on) {
+  document.getElementById('btnReg').disabled         = on;
+  document.getElementById('btnRegSpin').style.display = on ? 'block' : 'none';
+  document.getElementById('btnRegTxt').style.display  = on ? 'none'  : 'inline';
+}
+
+function togglePw(id, btn) {
+  const inp = document.getElementById(id);
+  inp.type  = inp.type === 'password' ? 'text' : 'password';
+  btn.style.color = inp.type === 'text' ? 'rgba(126,234,173,0.8)' : '';
+}
+
+function checkStrength(val) {
+  const bar  = document.getElementById('pwBar');
+  let score  = 0;
+  if (val.length >= 8)  score++;
+  if (val.length >= 12) score++;
+  if (/[A-Z]/.test(val)) score++;
+  if (/[0-9]/.test(val)) score++;
+  if (/[^A-Za-z0-9]/.test(val)) score++;
+  const colors = ['#ff5c5c','#ff8c42','#ffc107','#7eeaad','#3db87a'];
+  const widths  = ['15%','30%','55%','78%','100%'];
+  bar.style.width      = val.length ? widths[Math.min(score-1,4)] : '0%';
+  bar.style.background = val.length ? colors[Math.min(score-1,4)] : 'transparent';
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Enter') doRegister(); });
+</script>
+</body>
+</html>
