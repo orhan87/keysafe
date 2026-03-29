@@ -281,6 +281,44 @@ button{cursor:pointer;border:none;background:none;}
 .sc-action:hover{background:rgba(255,255,255,0.10);color:var(--t0);}
 .sc-action.ok{background:var(--accent-g);color:var(--accent);border-color:var(--accent-bd);}
 
+/* ── ÜÇNOKTA MENÜSÜ ── */
+.card-menu-btn{
+  width:26px;height:26px;border-radius:7px;flex-shrink:0;
+  background:rgba(255,255,255,0.06);border:1px solid var(--glass-bd);
+  display:flex;align-items:center;justify-content:center;
+  color:var(--t2);transition:all 0.15s;
+}
+.card-menu-btn:hover{background:rgba(255,255,255,0.12);color:var(--t0);}
+.ctx-menu{
+  position:absolute;top:10px;right:10px;z-index:20;
+  background:rgba(12,14,24,0.95);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border:1px solid var(--glass-bd2);border-radius:12px;
+  padding:6px;min-width:140px;
+  box-shadow:0 12px 40px rgba(0,0,0,0.5);
+  animation:menuIn 0.15s ease;
+}
+@keyframes menuIn{from{opacity:0;transform:scale(0.95) translateY(-4px)}to{opacity:1;transform:none}}
+.ctx-item{
+  display:flex;align-items:center;gap:8px;
+  padding:8px 10px;border-radius:8px;
+  font-size:12px;font-weight:600;color:var(--t1);cursor:pointer;
+  transition:background 0.1s;white-space:nowrap;
+}
+.ctx-item:hover{background:rgba(255,255,255,0.08);}
+.ctx-item.danger{color:rgba(255,100,100,0.85);}
+.ctx-item.danger:hover{background:rgba(255,100,100,0.08);}
+
+/* klasör düzenle */
+.folder-item:hover .folder-edit{opacity:1;}
+.folder-edit{
+  width:20px;height:20px;border-radius:6px;flex-shrink:0;
+  background:rgba(255,255,255,0.08);border:1px solid var(--glass-bd);
+  display:flex;align-items:center;justify-content:center;
+  color:var(--t3);opacity:0;transition:all 0.15s;
+}
+.folder-edit:hover{background:var(--accent-g);border-color:var(--accent-bd);color:var(--accent);}
+
 /* ── BOŞ DURUM ── */
 .empty{
   height:100%;display:flex;flex-direction:column;
@@ -496,6 +534,44 @@ button{cursor:pointer;border:none;background:none;}
   </div>
 </div>
 
+<!-- KLASÖR DÜZENLE MODAL -->
+<div class="modal-bg" id="folderEditModal">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-title" id="folderEditTitle">Klasörü Düzenle</div>
+    <input type="hidden" id="feId" />
+    <div class="m-field"><label class="m-label">Klasör Adı</label><input class="m-inp" type="text" id="feName" /></div>
+    <div class="m-field"><label class="m-label">Açıklama <span style="color:var(--t3);font-weight:400;text-transform:none">(opsiyonel)</span></label><input class="m-inp" type="text" id="feDesc" /></div>
+    <div class="m-foot" style="display:flex;gap:8px;justify-content:space-between;padding-top:16px;border-top:1px solid var(--glass-bd);">
+      <button class="m-cancel" style="padding:9px 16px;border-radius:50px;background:rgba(255,100,100,0.08);border:1px solid rgba(255,100,100,0.25);font-size:12px;font-weight:600;color:rgba(255,100,100,0.85);cursor:pointer;" onclick="deleteFolder()">Klasörü Sil</button>
+      <div style="display:flex;gap:8px;">
+        <button class="m-cancel" onclick="closeModal('folderEditModal')">İptal</button>
+        <button class="m-save" onclick="saveFolder2()">Kaydet</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- KİMLİK DÜZENLE MODAL -->
+<div class="modal-bg" id="editCredModal">
+  <div class="modal">
+    <div class="modal-title">Kaydı Düzenle</div>
+    <input type="hidden" id="ecId" />
+    <div class="m-field"><label class="m-label">Site Adı</label><input class="m-inp" type="text" id="ecSite" /></div>
+    <div class="m-field"><label class="m-label">URL</label><input class="m-inp" type="text" id="ecUrl" /></div>
+    <div class="m-field"><label class="m-label">Etiket</label><input class="m-inp" type="text" id="ecLabel" /></div>
+    <label class="m-label">Giriş Alanları</label>
+    <div class="fields-wrap" id="ecFieldsWrap"></div>
+    <button class="add-field-btn" onclick="addField2()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Alan Ekle
+    </button>
+    <div class="m-foot">
+      <button class="m-cancel" onclick="closeModal('editCredModal')">İptal</button>
+      <button class="m-save" id="saveEditCredBtn" onclick="saveEditCred()">Kaydet</button>
+    </div>
+  </div>
+</div>
+
 <!-- KİMLİK KAYIT MODAL -->
 <div class="modal-bg" id="credModal">
   <div class="modal">
@@ -654,6 +730,9 @@ function renderFolders(list) {
         ${f.description ? `<div class="folder-desc">${f.description}</div>` : ''}
       </div>
       <div class="folder-cnt" id="fcnt_${f.id}">${cnt}</div>
+      <button class="folder-edit" onclick="event.stopPropagation();openFolderEditModal('${f.id}')" title="Düzenle">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      </button>
     </div>`;
   }).join('');
 }
@@ -770,7 +849,7 @@ function renderCard(c, cc) {
       </div>`;
   }).join('');
 
-  return `<div class="site-card">
+  return `<div class="site-card" style="position:relative;">
     <div class="sc-head">
       <div class="sc-ico" style="background:${cc.bg};border-color:${cc.bd};color:${cc.cl}">${kisa}</div>
       <div class="sc-nameblock">
@@ -778,7 +857,22 @@ function renderCard(c, cc) {
         ${label}
         ${c.site_url ? `<div class="sc-url">${c.site_url}</div>` : ''}
       </div>
-      ${c.site_url ? `<a class="sc-goto" href="https://${c.site_url}" target="_blank" title="Siteye git">↗</a>` : ''}
+      <div style="display:flex;gap:5px;flex-shrink:0;">
+        ${c.site_url ? `<a class="sc-goto" href="https://${c.site_url}" target="_blank" title="Siteye git">↗</a>` : ''}
+        <button class="card-menu-btn" onclick="toggleCardMenu(event,'${c.id}')" title="Seçenekler">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+        </button>
+      </div>
+    </div>
+    <div id="cmenu_${c.id}" style="display:none;" class="ctx-menu">
+      <div class="ctx-item" onclick="openEditCredModal('${c.id}')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        Düzenle
+      </div>
+      <div class="ctx-item danger" onclick="deleteCred('${c.id}','${c.site_name}')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+        Sil
+      </div>
     </div>
     <div class="sc-div"></div>
     ${fieldsHtml}
@@ -1086,6 +1180,240 @@ async function saveCred() {
 // ════════════════════════════════════════════════════════════
 // YARDIMCI
 // ════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════
+// KLASÖR DÜZENLE / SİL
+// ════════════════════════════════════════════════════════════
+function openFolderEditModal(id) {
+  const f = folders.find(x => x.id === id);
+  if (!f) return;
+  document.getElementById('feId').value   = f.id;
+  document.getElementById('feName').value = f.name;
+  document.getElementById('feDesc').value = f.description || '';
+  document.getElementById('folderEditModal').classList.add('open');
+  setTimeout(() => document.getElementById('feName').focus(), 100);
+}
+
+async function saveFolder2() {
+  const id   = document.getElementById('feId').value;
+  const name = document.getElementById('feName').value.trim();
+  const desc = document.getElementById('feDesc').value.trim();
+  if (!name) { showToast('Klasör adı boş olamaz'); return; }
+
+  const { error } = await sb.from('folders')
+    .update({ name, description: desc || null })
+    .eq('id', id);
+
+  if (error) { showToast('Güncellenemedi: ' + error.message); return; }
+  closeModal('folderEditModal');
+  showToast('Klasör güncellendi');
+  await loadFolders();
+  if (activeFolderId === id) {
+    document.getElementById('rpTitle').textContent = name;
+    document.getElementById('rpMeta').textContent  = desc;
+  }
+}
+
+async function deleteFolder() {
+  const id   = document.getElementById('feId').value;
+  const name = document.getElementById('feName').value;
+  if (!confirm(`"${name}" klasörünü ve içindeki tüm kayıtları silmek istiyor musunuz? Bu işlem geri alınamaz.`)) return;
+
+  const { error } = await sb.from('folders').delete().eq('id', id);
+  if (error) { showToast('Silinemedi: ' + error.message); return; }
+
+  closeModal('folderEditModal');
+  showToast('Klasör silindi');
+  folders = folders.filter(f => f.id !== id);
+  renderFolders(folders);
+
+  if (activeFolderId === id) {
+    activeFolderId = null;
+    document.getElementById('rpTitle').textContent = 'Klasör seçin';
+    document.getElementById('rpMeta').textContent  = 'Soldan bir klasör seçerek başlayın';
+    document.getElementById('rpBtns').style.display = 'none';
+    document.getElementById('catBar').style.display = 'none';
+    document.getElementById('cardsScroll').innerHTML = `<div class="empty">
+      <div class="empty-ring"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div>
+      <div class="empty-txt">Klasör seçilmedi</div>
+      <div class="empty-sub">Soldan bir klasör seçerek başlayın</div>
+    </div>`;
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// KART MENÜSÜ
+// ════════════════════════════════════════════════════════════
+let activeMenu = null;
+
+function toggleCardMenu(e, credId) {
+  e.stopPropagation();
+  const menu = document.getElementById('cmenu_' + credId);
+  if (!menu) return;
+
+  // Başka açık menü varsa kapat
+  if (activeMenu && activeMenu !== menu) {
+    activeMenu.style.display = 'none';
+  }
+
+  const isOpen = menu.style.display === 'block';
+  menu.style.display = isOpen ? 'none' : 'block';
+  activeMenu = isOpen ? null : menu;
+}
+
+document.addEventListener('click', () => {
+  if (activeMenu) { activeMenu.style.display = 'none'; activeMenu = null; }
+});
+
+// ════════════════════════════════════════════════════════════
+// KAYIT DÜZENLE
+// ════════════════════════════════════════════════════════════
+let editFieldRows = [];
+
+async function openEditCredModal(credId) {
+  if (activeMenu) { activeMenu.style.display = 'none'; activeMenu = null; }
+
+  const cred = credentials.find(c => c.id === credId);
+  if (!cred) return;
+
+  document.getElementById('ecId').value    = cred.id;
+  document.getElementById('ecSite').value  = cred.site_name;
+  document.getElementById('ecUrl').value   = cred.site_url || '';
+  document.getElementById('ecLabel').value = cred.label || '';
+
+  // Mevcut alanları yükle — şifreli değerleri çöz
+  editFieldRows = [];
+  document.getElementById('ecFieldsWrap').innerHTML = '';
+
+  const fields = (cred.credential_fields || []).sort((a,b) => a.sort_order - b.sort_order);
+  for (const f of fields) {
+    let plain = '';
+    try { plain = await decryptField(f.encrypted_value); } catch {}
+    addField2(f.field_name, plain, f.is_secret, '', f.id);
+  }
+
+  document.getElementById('editCredModal').classList.add('open');
+}
+
+function addField2(name='', val='', secret=true, placeholder='', existingId=null) {
+  const id = 'ef_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
+  editFieldRows.push({ id, secret, existingId });
+
+  const wrap = document.getElementById('ecFieldsWrap');
+  const div  = document.createElement('div');
+  div.className = 'dyn-field';
+  div.id = id;
+  div.innerHTML = `
+    <input class="dyn-field-name" type="text" placeholder="Alan adı" value="${name}" id="${id}_name" />
+    <div class="dyn-field-sep"></div>
+    <input class="dyn-field-val" type="${secret?'password':'text'}" placeholder="${placeholder||'Değer'}" value="${val}" id="${id}_val" />
+    <button class="dyn-secret ${secret?'on':''}" title="Gizli alan" onclick="toggleSecret2('${id}')" id="${id}_sec">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    </button>
+    <button class="dyn-del" onclick="removeField2('${id}')">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>`;
+  wrap.appendChild(div);
+}
+
+function toggleSecret2(id) {
+  const row = editFieldRows.find(r => r.id === id);
+  if (!row) return;
+  row.secret = !row.secret;
+  const btn = document.getElementById(id + '_sec');
+  const inp = document.getElementById(id + '_val');
+  if (btn) btn.classList.toggle('on', row.secret);
+  if (inp) inp.type = row.secret ? 'password' : 'text';
+}
+
+function removeField2(id) {
+  editFieldRows = editFieldRows.filter(r => r.id !== id);
+  document.getElementById(id)?.remove();
+}
+
+async function saveEditCred() {
+  const credId   = document.getElementById('ecId').value;
+  const siteName = document.getElementById('ecSite').value.trim();
+  const siteUrl  = document.getElementById('ecUrl').value.trim();
+  const label    = document.getElementById('ecLabel').value.trim();
+  if (!siteName) { showToast('Site adı boş olamaz'); return; }
+
+  const btn = document.getElementById('saveEditCredBtn');
+  btn.disabled = true; btn.textContent = 'Kaydediliyor…';
+
+  try {
+    // 1. Credential güncelle
+    await sb.from('credentials').update({
+      site_name:  siteName,
+      site_url:   siteUrl || null,
+      label:      label   || null,
+      updated_by: currentUser.id,
+    }).eq('id', credId);
+
+    // 2. Mevcut alanları sil, yeniden ekle
+    await sb.from('credential_fields').delete().eq('credential_id', credId);
+
+    const fieldInserts = [];
+    for (let i = 0; i < editFieldRows.length; i++) {
+      const row  = editFieldRows[i];
+      const name = document.getElementById(row.id + '_name')?.value.trim();
+      const val  = document.getElementById(row.id + '_val')?.value;
+      if (!name) continue;
+      const encrypted = await encryptField(val || '');
+      fieldInserts.push({
+        credential_id:   credId,
+        bureau_id:       bureauId,
+        field_name:      name,
+        encrypted_value: encrypted,
+        is_secret:       row.secret,
+        sort_order:      i,
+      });
+    }
+
+    if (fieldInserts.length) {
+      await sb.from('credential_fields').insert(fieldInserts);
+    }
+
+    // 3. Audit log
+    await sb.from('audit_logs').insert({
+      bureau_id: bureauId, user_id: currentUser.id,
+      action: 'update', resource_type: 'credential',
+      resource_id: credId, resource_name: siteName,
+    });
+
+    closeModal('editCredModal');
+    showToast(`"${siteName}" güncellendi`);
+    decrypted = {};
+    await loadCredentials(activeFolderId);
+
+  } catch (err) {
+    showToast('Hata: ' + (err.message || 'Kaydedilemedi'));
+  } finally {
+    btn.disabled = false; btn.textContent = 'Kaydet';
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// KAYIT SİL
+// ════════════════════════════════════════════════════════════
+async function deleteCred(credId, siteName) {
+  if (activeMenu) { activeMenu.style.display = 'none'; activeMenu = null; }
+  if (!confirm(`"${siteName}" kaydını silmek istiyor musunuz?`)) return;
+
+  const { error } = await sb.from('credentials').delete().eq('id', credId);
+  if (error) { showToast('Silinemedi: ' + error.message); return; }
+
+  // Audit log
+  await sb.from('audit_logs').insert({
+    bureau_id: bureauId, user_id: currentUser.id,
+    action: 'delete', resource_type: 'credential',
+    resource_name: siteName,
+  });
+
+  showToast(`"${siteName}" silindi`);
+  decrypted = {};
+  await loadCredentials(activeFolderId);
+}
+
 function openFolderModal() {
   document.getElementById('folderModal').classList.add('open');
   setTimeout(() => document.getElementById('fName').focus(), 100);
