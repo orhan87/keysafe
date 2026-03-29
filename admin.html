@@ -356,6 +356,37 @@ button{cursor:pointer;border:none;background:none;}
     </div>
   </div>
 
+  <!-- SITE ŞABLONLARI -->
+  <div class="panel" style="margin-bottom:20px;">
+    <div class="panel-head">
+      <div>
+        <div class="panel-title">Site Şablonları</div>
+        <div class="panel-sub">Kayıt eklerken görünecek hazır site listesi. Sistem şablonları kopyalanarak düzenlenebilir.</div>
+      </div>
+      <button class="btn btn-accent" onclick="openTplModal()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Yeni Şablon
+      </button>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="member-table" id="tplTable">
+        <thead>
+          <tr>
+            <th>Site Adı</th>
+            <th>Kategori</th>
+            <th>URL</th>
+            <th>Alanlar</th>
+            <th>Tür</th>
+            <th style="width:100px;"></th>
+          </tr>
+        </thead>
+        <tbody id="tplTableBody">
+          <tr><td colspan="6" class="empty-row">Yükleniyor…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
   <!-- TEHLİKELİ BÖLGE -->
   <div class="panel danger-zone">
     <div class="panel-head">
@@ -391,6 +422,45 @@ button{cursor:pointer;border:none;background:none;}
     <div class="m-foot">
       <button class="btn btn-ghost" onclick="closeModal('inviteModal')">İptal</button>
       <button class="btn btn-accent" onclick="sendInvite()">Daveti Gönder</button>
+    </div>
+  </div>
+</div>
+
+<!-- ŞABLON MODAL -->
+<div class="modal-bg" id="tplModal">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-title" id="tplModalTitle">Yeni Şablon</div>
+    <div class="modal-sub">Büronuza özel site şablonu oluşturun.</div>
+    <input type="hidden" id="tplId" />
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="m-field">
+        <label class="m-label">Site Adı</label>
+        <input class="m-inp" type="text" id="tplName" placeholder="SGK e-Bildirge" />
+      </div>
+      <div class="m-field">
+        <label class="m-label">Kategori</label>
+        <select class="m-select" id="tplCat">
+          <option>Vergi &amp; SGK</option>
+          <option>e-Fatura &amp; KEP</option>
+          <option>Ticaret Sicili</option>
+          <option>Banka &amp; Finans</option>
+          <option>E-posta &amp; İletişim</option>
+          <option>Diğer</option>
+        </select>
+      </div>
+    </div>
+    <div class="m-field">
+      <label class="m-label">URL <span style="color:var(--t3);font-weight:400;text-transform:none">(opsiyonel)</span></label>
+      <input class="m-inp" type="text" id="tplUrl" placeholder="sgk.gov.tr" />
+    </div>
+    <label class="m-label" style="margin-bottom:8px;display:block;">Giriş Alanları</label>
+    <div id="tplFieldsWrap" style="margin-bottom:10px;"></div>
+    <button onclick="addTplField()" style="width:100%;padding:8px;border-radius:var(--r);background:transparent;border:1px dashed rgba(255,255,255,0.12);font-size:11px;font-weight:600;color:var(--t3);cursor:pointer;margin-bottom:16px;transition:all 0.2s;" onmouseover="this.style.borderColor='rgba(126,234,173,0.3)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.12)';this.style.color='var(--t3)'">
+      + Alan Ekle
+    </button>
+    <div class="m-foot">
+      <button class="btn btn-ghost" onclick="closeModal('tplModal')">İptal</button>
+      <button class="btn btn-accent" onclick="saveTpl()">Kaydet</button>
     </div>
   </div>
 </div>
@@ -484,6 +554,7 @@ let toastTimer;
     loadSubscription(),
     loadStats(),
     loadAuditLogs(),
+    loadTemplates(),
   ]);
 })();
 
@@ -794,5 +865,158 @@ function showToast(msg) {
   document.getElementById('toast').classList.add('on');
   toastTimer = setTimeout(() => document.getElementById('toast').classList.remove('on'), 2400);
 }
+// ════════════════════════════════════════════════════════════
+// SITE ŞABLONLARI
+// ════════════════════════════════════════════════════════════
+let templates = [];
+let tplFields = [];
+
+async function loadTemplates() {
+  const { data } = await sb
+    .from('site_templates')
+    .select('*')
+    .order('sort_order');
+  templates = data || [];
+  renderTemplates();
+}
+
+function renderTemplates() {
+  const tbody = document.getElementById('tplTableBody');
+  if (!templates.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-row">Henüz şablon yok</td></tr>';
+    return;
+  }
+  tbody.innerHTML = templates.map(t => {
+    const fields = Array.isArray(t.fields) ? t.fields : JSON.parse(t.fields || '[]');
+    const isSys  = !t.bureau_id;
+    return `<tr>
+      <td style="font-weight:600;font-size:13px;">${t.site_name}</td>
+      <td style="font-size:12px;color:var(--t2);">${t.category}</td>
+      <td style="font-size:11px;font-family:var(--mono);color:var(--t2);">${t.site_url||'—'}</td>
+      <td style="font-size:12px;color:var(--t2);">${fields.map(f=>f.name).join(', ')}</td>
+      <td>
+        <span class="role-badge ${isSys?'role-member':'role-admin'}">${isSys?'Sistem':'Büro'}</span>
+      </td>
+      <td>
+        <div style="display:flex;gap:6px;justify-content:flex-end;">
+          ${isSys
+            ? `<button class="btn btn-ghost" style="padding:4px 10px;font-size:11px;" onclick="cloneTpl('${t.id}')">Kopyala</button>`
+            : `<button class="btn btn-ghost" style="padding:4px 10px;font-size:11px;" onclick="editTpl('${t.id}')">Düzenle</button>
+               <button class="del-btn" onclick="deleteTpl('${t.id}')">
+                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+               </button>`
+          }
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function openTplModal(tpl = null) {
+  tplFields = [];
+  document.getElementById('tplId').value    = tpl?.id || '';
+  document.getElementById('tplName').value  = tpl?.site_name || '';
+  document.getElementById('tplUrl').value   = tpl?.site_url || '';
+  document.getElementById('tplCat').value   = tpl?.category || 'Vergi & SGK';
+  document.getElementById('tplFieldsWrap').innerHTML = '';
+  document.getElementById('tplModalTitle').textContent = tpl ? 'Şablonu Düzenle' : 'Yeni Şablon';
+
+  const fields = tpl ? (Array.isArray(tpl.fields) ? tpl.fields : JSON.parse(tpl.fields || '[]')) : [];
+  if (fields.length) {
+    fields.forEach(f => addTplField(f.name, f.is_secret, f.placeholder));
+  } else {
+    addTplField('Kullanıcı Adı', false, '');
+    addTplField('Şifre', true, '');
+  }
+  document.getElementById('tplModal').classList.add('open');
+}
+
+function editTpl(id) {
+  const tpl = templates.find(t => t.id === id);
+  if (tpl) openTplModal(tpl);
+}
+
+function cloneTpl(id) {
+  const tpl = templates.find(t => t.id === id);
+  if (!tpl) return;
+  openTplModal({ ...tpl, id: null, site_name: tpl.site_name + ' (Kopya)' });
+}
+
+function addTplField(name = '', secret = true, placeholder = '') {
+  const id = 'tf_' + Date.now() + '_' + Math.random().toString(36).slice(2,5);
+  tplFields.push({ id, secret });
+  const wrap = document.getElementById('tplFieldsWrap');
+  const div  = document.createElement('div');
+  div.style.cssText = 'display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:9px 12px;margin-bottom:8px;';
+  div.id = id;
+  div.innerHTML = `
+    <input type="text" placeholder="Alan adı" value="${name}" id="${id}_name"
+      style="flex:1;background:transparent;border:none;outline:none;font-size:12px;color:rgba(255,255,255,0.7);font-family:var(--mono);" />
+    <div style="width:1px;height:20px;background:rgba(255,255,255,0.1);flex-shrink:0;"></div>
+    <input type="text" placeholder="İpucu metin" value="${placeholder}" id="${id}_ph"
+      style="flex:1.5;background:transparent;border:none;outline:none;font-size:12px;color:rgba(255,255,255,0.5);" />
+    <button onclick="toggleTplSecret('${id}')" id="${id}_sec"
+      style="width:26px;height:26px;border-radius:7px;background:${secret?'rgba(126,234,173,0.12)':'rgba(255,255,255,0.06)'};border:1px solid ${secret?'rgba(126,234,173,0.3)':'rgba(255,255,255,0.1)'};display:flex;align-items:center;justify-content:center;color:${secret?'var(--accent)':'rgba(255,255,255,0.3)'};flex-shrink:0;" title="Gizli alan">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    </button>
+    <button onclick="document.getElementById('${id}').remove();tplFields=tplFields.filter(f=>f.id!=='${id}')"
+      style="width:26px;height:26px;border-radius:7px;background:rgba(255,100,100,0.06);border:1px solid rgba(255,100,100,0.15);display:flex;align-items:center;justify-content:center;color:rgba(255,100,100,0.5);flex-shrink:0;">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>`;
+  wrap.appendChild(div);
+}
+
+function toggleTplSecret(id) {
+  const row = tplFields.find(f => f.id === id);
+  if (!row) return;
+  row.secret = !row.secret;
+  const btn = document.getElementById(id + '_sec');
+  btn.style.background    = row.secret ? 'rgba(126,234,173,0.12)' : 'rgba(255,255,255,0.06)';
+  btn.style.borderColor   = row.secret ? 'rgba(126,234,173,0.3)'  : 'rgba(255,255,255,0.1)';
+  btn.style.color         = row.secret ? 'var(--accent)'           : 'rgba(255,255,255,0.3)';
+}
+
+async function saveTpl() {
+  const name = document.getElementById('tplName').value.trim();
+  const cat  = document.getElementById('tplCat').value;
+  const url  = document.getElementById('tplUrl').value.trim();
+  const id   = document.getElementById('tplId').value;
+  if (!name) { showToast('Site adı boş olamaz'); return; }
+
+  const fields = tplFields.map(f => ({
+    name:        document.getElementById(f.id + '_name')?.value.trim() || '',
+    is_secret:   f.secret,
+    placeholder: document.getElementById(f.id + '_ph')?.value.trim()  || '',
+  })).filter(f => f.name);
+
+  const payload = {
+    bureau_id:  bureauId,
+    category:   cat,
+    site_name:  name,
+    site_url:   url || null,
+    fields:     fields,
+  };
+
+  let error;
+  if (id) {
+    ({ error } = await sb.from('site_templates').update(payload).eq('id', id));
+  } else {
+    ({ error } = await sb.from('site_templates').insert(payload));
+  }
+
+  if (error) { showToast('Kaydedilemedi: ' + error.message); return; }
+  closeModal('tplModal');
+  showToast(id ? 'Şablon güncellendi' : 'Şablon oluşturuldu');
+  await loadTemplates();
+}
+
+async function deleteTpl(id) {
+  if (!confirm('Bu şablonu silmek istiyor musunuz?')) return;
+  const { error } = await sb.from('site_templates').delete().eq('id', id);
+  if (error) { showToast('Silinemedi: ' + error.message); return; }
+  showToast('Şablon silindi');
+  await loadTemplates();
+}
+
 async function doSignOut() {
   await sb.auth.signOu

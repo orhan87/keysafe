@@ -500,29 +500,36 @@ button{cursor:pointer;border:none;background:none;}
 <div class="modal-bg" id="credModal">
   <div class="modal">
     <div class="modal-title">Yeni Kayıt Ekle</div>
-    <div class="modal-sub">Site bilgilerini ve giriş alanlarını ekleyin.</div>
+    <div class="modal-sub">Kategori ve site seçin, alanlar otomatik gelir.</div>
 
-    <div class="m-field"><label class="m-label">Site Adı</label><input class="m-inp" type="text" id="cSite" placeholder="SGK e-Bildirge" /></div>
-    <div class="m-field"><label class="m-label">URL</label><input class="m-inp" type="text" id="cUrl" placeholder="sgk.gov.tr" /></div>
-    <div class="m-field">
+    <!-- ADIM 1: KATEGORİ -->
+    <div class="m-field" id="stepCat">
       <label class="m-label">Kategori</label>
-      <select class="m-select" id="cCat">
-        <option>Vergi &amp; SGK</option>
-        <option>e-Fatura &amp; KEP</option>
-        <option>Ticaret Sicili</option>
-        <option>Banka &amp; Finans</option>
-        <option>E-posta &amp; İletişim</option>
-        <option>Diğer</option>
+      <select class="m-select" id="cCat" onchange="onCatChange(this.value)">
+        <option value="">— Seçin —</option>
       </select>
     </div>
-    <div class="m-field"><label class="m-label">Etiket <span style="color:var(--t3);font-weight:400;text-transform:none">(opsiyonel, ör: "Patron Girişi")</span></label><input class="m-inp" type="text" id="cLabel" placeholder="Patron Girişi" /></div>
 
-    <label class="m-label">Giriş Alanları</label>
-    <div class="fields-wrap" id="fieldsWrap"></div>
-    <button class="add-field-btn" onclick="addField()">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      Alan Ekle
-    </button>
+    <!-- ADIM 2: SİTE ŞABLONU -->
+    <div class="m-field" id="stepTpl" style="display:none;">
+      <label class="m-label">Site</label>
+      <select class="m-select" id="cTpl" onchange="onTplChange(this.value)">
+        <option value="">— Seçin —</option>
+      </select>
+    </div>
+
+    <!-- ADIM 3: DETAYLAR -->
+    <div id="stepDetail" style="display:none;">
+      <div class="m-field"><label class="m-label">Site Adı</label><input class="m-inp" type="text" id="cSite" placeholder="SGK e-Bildirge" /></div>
+      <div class="m-field"><label class="m-label">URL <span style="color:var(--t3);font-weight:400;text-transform:none">(opsiyonel)</span></label><input class="m-inp" type="text" id="cUrl" placeholder="sgk.gov.tr" /></div>
+      <div class="m-field"><label class="m-label">Etiket <span style="color:var(--t3);font-weight:400;text-transform:none">(ör: "Patron Girişi")</span></label><input class="m-inp" type="text" id="cLabel" placeholder="" /></div>
+      <label class="m-label">Giriş Alanları</label>
+      <div class="fields-wrap" id="fieldsWrap"></div>
+      <button class="add-field-btn" onclick="addField()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Alan Ekle
+      </button>
+    </div>
 
     <div class="m-foot">
       <button class="m-cancel" onclick="closeModal('credModal')">İptal</button>
@@ -613,7 +620,7 @@ let toastTimer;
     document.getElementById('adminBtn').style.display = 'flex';
   }
 
-  await loadFolders();
+  await Promise.all([loadFolders(), loadTemplates()]);
 })();
 
 // ════════════════════════════════════════════════════════════
@@ -902,23 +909,74 @@ async function saveFolder() {
 // ════════════════════════════════════════════════════════════
 let fieldRows = [];
 
+// Şablon verisi
+let templates = [];
+
+async function loadTemplates() {
+  const { data } = await sb
+    .from('site_templates')
+    .select('*')
+    .eq('is_active', true)
+    .order('sort_order');
+  templates = data || [];
+
+  // Kategori select'i doldur
+  const cats = [...new Set(templates.map(t => t.category))];
+  const catSel = document.getElementById('cCat');
+  catSel.innerHTML = '<option value="">— Seçin —</option>' +
+    cats.map(c => `<option value="${c}">${c}</option>`).join('');
+}
+
+function onCatChange(cat) {
+  const tplSel = document.getElementById('cTpl');
+  document.getElementById('stepDetail').style.display = 'none';
+  if (!cat) { document.getElementById('stepTpl').style.display = 'none'; return; }
+
+  const catTemplates = templates.filter(t => t.category === cat);
+  tplSel.innerHTML = '<option value="">— Seçin —</option>' +
+    catTemplates.map(t => `<option value="${t.id}">${t.site_name}</option>`).join('') +
+    '<option value="custom">+ Özel giriş</option>';
+  document.getElementById('stepTpl').style.display = 'block';
+}
+
+function onTplChange(tplId) {
+  const detail = document.getElementById('stepDetail');
+  if (!tplId) { detail.style.display = 'none'; return; }
+
+  fieldRows = [];
+  document.getElementById('fieldsWrap').innerHTML = '';
+  document.getElementById('cLabel').value = '';
+
+  if (tplId === 'custom') {
+    document.getElementById('cSite').value = '';
+    document.getElementById('cUrl').value  = '';
+    addField('Kullanıcı Adı', '', false);
+    addField('Şifre', '', true);
+  } else {
+    const tpl = templates.find(t => t.id === tplId);
+    if (!tpl) return;
+    document.getElementById('cSite').value = tpl.site_name;
+    document.getElementById('cUrl').value  = tpl.site_url || '';
+    const fields = Array.isArray(tpl.fields) ? tpl.fields : JSON.parse(tpl.fields || '[]');
+    fields.forEach(f => addField(f.name, '', f.is_secret, f.placeholder));
+  }
+
+  detail.style.display = 'block';
+  setTimeout(() => document.getElementById('cLabel').focus(), 100);
+}
+
 function openCredModal() {
   if (!activeFolderId) { showToast('Önce bir klasör seçin'); return; }
   fieldRows = [];
-  document.getElementById('cSite').value  = '';
-  document.getElementById('cUrl').value   = '';
-  document.getElementById('cLabel').value = '';
+  document.getElementById('cCat').value = '';
+  document.getElementById('stepTpl').style.display = 'none';
+  document.getElementById('stepDetail').style.display = 'none';
   document.getElementById('fieldsWrap').innerHTML = '';
-
-  // Varsayılan alanlar
-  addField('Kullanıcı Adı', '', false);
-  addField('Şifre', '', true);
-
+  if (!templates.length) loadTemplates();
   document.getElementById('credModal').classList.add('open');
-  setTimeout(() => document.getElementById('cSite').focus(), 100);
 }
 
-function addField(name='', val='', secret=true) {
+function addField(name='', val='', secret=true, placeholder='') {
   const id = 'fr_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
   fieldRows.push({id, secret});
 
@@ -929,7 +987,7 @@ function addField(name='', val='', secret=true) {
   div.innerHTML = `
     <input class="dyn-field-name" type="text" placeholder="Alan adı" value="${name}" id="${id}_name" />
     <div class="dyn-field-sep"></div>
-    <input class="dyn-field-val" type="${secret?'password':'text'}" placeholder="Değer" value="${val}" id="${id}_val" />
+    <input class="dyn-field-val" type="${secret?'password':'text'}" placeholder="${placeholder||'Değer'}" value="${val}" id="${id}_val" />
     <button class="dyn-secret ${secret?'on':''}" title="Gizli alan" onclick="toggleSecret('${id}')" id="${id}_sec">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
     </button>
