@@ -572,9 +572,22 @@ let toastTimer;
   if (!session) { window.location.href = 'login.html'; return; }
   currentUser = session.user;
 
-  // Vault key kontrolü
+  // Vault key kontrolü — önce window'da bak, sonra sessionStorage'da
   vaultKey = window[VAULT_KEY];
-  if (!vaultKey) { window.location.href = 'master-sifre.html'; return; }
+  if (!vaultKey) {
+    const rawHex = sessionStorage.getItem('govdag_raw_key');
+    if (rawHex) {
+      // sessionStorage'dan import et
+      const rawBuf = hexToBuffer(rawHex);
+      vaultKey = await crypto.subtle.importKey(
+        'raw', rawBuf, {name:'AES-GCM'}, false, ['encrypt','decrypt']
+      );
+      window[VAULT_KEY] = vaultKey;
+    } else {
+      window.location.href = 'master-sifre.html';
+      return;
+    }
+  }
 
   // Büro bilgisi
   const { data: member } = await sb

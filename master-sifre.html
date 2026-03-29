@@ -489,6 +489,9 @@ async function doSetup() {
     // 4. Anahtarı window objesine koy (tab kapanınca yok olur)
     window[VAULT_KEY_NAME] = key;
 
+    // Anahtarı sessionStorage'a export et (dashboard'da import edilecek)
+    const rawKey = await crypto.subtle.exportKey('raw', key);
+    sessionStorage.setItem('govdag_raw_key', bufferToHex(new Uint8Array(rawKey)));
     showSuccess();
   } catch (err) {
     setLoading('btnSetup','btnSetupSpin','btnSetupTxt', false);
@@ -539,6 +542,9 @@ async function doLogin() {
     }
 
     window[VAULT_KEY_NAME] = key;
+    // Anahtarı sessionStorage'a export et
+    const rawKey = await crypto.subtle.exportKey('raw', key);
+    sessionStorage.setItem('govdag_raw_key', bufferToHex(new Uint8Array(rawKey)));
     showSuccess();
 
   } catch (err) {
@@ -567,6 +573,7 @@ function showSuccess() {
   document.getElementById('setupMode').style.display  = 'none';
   document.getElementById('loginMode').style.display  = 'none';
   document.getElementById('successView').style.display = 'block';
+  sessionStorage.setItem('from_master', '1');
   setTimeout(() => window.location.href = 'dashboard.html', 1800);
 }
 
